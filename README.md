@@ -59,7 +59,7 @@ pip install -r requirements.txt
 
 ## 5. Running the pipeline
 
-To generat ethe HDF5 dataset from your raw MCAP file, execute the dataset orchestrator: 
+To generate the HDF5 dataset from your raw MCAP file, execute the dataset orchestrator: 
 
 ```bash 
 python3 generate_dataset.py
