@@ -47,7 +47,6 @@ class SensorSynchronizer:
 
         if streamMessage.topic in [LIDAR_TOPIC, CAMERA_IMAGE_TOPIC]:
             if self.checkFlushConstraint(streamMessage.topic, streamMessage.timestamp):
-                print(f"Flushing samples due to gap on topic {streamMessage.topic} at timestamp {streamMessage.timestamp}")
                 yield from self.flushSamples()
 
             self.chunkBuffer[streamMessage.topic].append(chunkEntry)
