@@ -4,6 +4,7 @@ CHUNKS_FILE_PATH = "data/processed/chunks.hdf5"
 
 MAX_CHUNK_GAP = 0.15
 SENSOR_SYNC_THRESHOLD = 0.05
+TF_CACHE_SIZE = 100
 HDF5_WRITE_BATCH_SIZE = 100
 
 CAMERA_INTRINSIC_PARAMETERS_TOPIC = "/sensor/camera/left/camera_info"
