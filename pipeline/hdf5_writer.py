@@ -82,7 +82,7 @@ class HDF5Writer:
                         shape=(0, 4, 4),
                         maxshape=(None, 4, 4),
                         dtype=np.float32,
-                        compression=DATA_COMPRESSION_METHOD
+                        compression=DATA_COMPRESSION_METHOD,
                     )
                 
                 dataset = self.h5File[datasetPath]
@@ -130,7 +130,7 @@ class HDF5Writer:
         )
         
         self.h5File.create_group(CAMERA_GROUP)
-        cameraData = MessageConverter.compressedImageToNumpy(sampleTemplate["camera"][ROS_MSG])
+        cameraData = MessageConverter.compressedImageToNumpy(sampleTemplate[CAMERA][ROS_MSG])
         height, width, channels = cameraData.shape
         self.h5File.create_dataset(
             CAMERA_IMAGES_DATASET_PATH,
@@ -146,10 +146,7 @@ class HDF5Writer:
         self.h5File.attrs[NUM_SAMPLES_ATTRIBUTE] = 0
         self.h5File.attrs[LIDAR_POINT_OFFSET_ATTRIBUTE] = 0
 
-    def resizeDatasets(self, newSize):
-        currentSize = self.h5File.attrs.get(NUM_SAMPLES_ATTRIBUTE, 0)
-        
-        
+    def resizeDatasets(self, newSize):        
         self.h5File[TIMESTAMP_DATASET_PATH].resize((newSize,))
         self.h5File[CHUNK_IDS_DATASET_PATH].resize((newSize,))
         self.h5File[LIDAR_OFFSETS_DATASET_PATH].resize((newSize,))
@@ -165,7 +162,6 @@ class HDF5Writer:
         self.h5File[LIDAR_DATA_DATASET_PATH].resize((newSize, 4))
 
     def finalize(self, cameraMetadata, staticTransforms):
-
         numSamples = self.h5File.attrs.get(NUM_SAMPLES_ATTRIBUTE, 0)
         lidarPointOffset = self.h5File.attrs.get(LIDAR_POINT_OFFSET_ATTRIBUTE, 0)
         
