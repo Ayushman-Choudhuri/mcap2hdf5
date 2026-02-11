@@ -1,26 +1,26 @@
 import h5py
-import torch
-import numpy as np
 import logging
-from torch.utils.data import Dataset, DataLoader
-from typing import Dict, List, Any, Optional
-
+import numpy as np
 from pipeline.config import (
-    TIMESTAMP_DATASET_PATH,
+    CAMERA_IMAGES_DATASET_PATH,
+    CHUNKS_FILE_PATH,
+    LIDAR_COUNTS_DATASET_PATH,
     LIDAR_DATA_DATASET_PATH,
     LIDAR_OFFSETS_DATASET_PATH,
-    LIDAR_COUNTS_DATASET_PATH,
-    CAMERA_IMAGES_DATASET_PATH,
-    NUM_SAMPLES_ATTRIBUTE
+    NUM_SAMPLES_ATTRIBUTE,
+    TIMESTAMP_DATASET_PATH
 )
+import torch
+from torch.utils.data import Dataset, DataLoader
+from typing import Dict, List, Any, Optional
 
 class KittiHDF5Dataset(Dataset):
     def __init__(self, h5FilePath: str, transform: Optional[Any] = None):
         self.h5FilePath = h5FilePath
         self.transform = transform
         self.logger = logging.getLogger(__name__)
-        
-        with h5py.File(self.h5_path, 'r') as f:
+
+        with h5py.File(self.h5FilePath, "r") as f:
             if NUM_SAMPLES_ATTRIBUTE not in f.attrs:
                 raise KeyError(f"HDF5 file missing {NUM_SAMPLES_ATTRIBUTE} attribute.")
             self.length = f.attrs[NUM_SAMPLES_ATTRIBUTE]
@@ -29,7 +29,7 @@ class KittiHDF5Dataset(Dataset):
 
     def _init_db(self):
         if self.h5File is None:
-            self.h5File = h5py.File(self.h5FilePath, 'r', libver='latest', swmr=True)
+            self.h5File = h5py.File(self.h5FilePath, "r", libver="latest", swmr=True)
 
     def __len__(self) -> int:
         return self.length
@@ -67,8 +67,7 @@ def kitti_collate_fn(batch: List[Dict]) -> Dict[str, Any]:
     timestamps = torch.stack([item['timestamp'] for item in batch])
     indices = [item['index'] for item in batch]
     
-    # We keep lidar as a list of tensors. 
-    # Alternatively, you could pad them to the max N in the batch.
+
     lidars = [item['lidar'] for item in batch]
     
     return {
@@ -78,18 +77,17 @@ def kitti_collate_fn(batch: List[Dict]) -> Dict[str, Any]:
         "indices": indices
     }
 
-# Example Usage
+
 if __name__ == "__main__":
-    dataset = KittiHDF5Dataset("data/processed/chunks.hdf5")
+    dataset = KittiHDF5Dataset(CHUNKS_FILE_PATH)
     
-    # Senior-level tip: Mention why num_workers > 0 requires the _init_db pattern
     loader = DataLoader(
         dataset, 
         batch_size=8, 
         shuffle=True, 
         num_workers=4, 
         collate_fn=kitti_collate_fn,
-        pin_memory=True  # Speed up transfer to GPU
+        pin_memory=True 
     )
     
     for batch in loader:

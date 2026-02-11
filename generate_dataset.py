@@ -1,15 +1,14 @@
 import logging
-import h5py
 from pipeline.config import (
-    MCAP_FILE_PATH,
     CHUNKS_FILE_PATH,
-    MAX_CHUNK_GAP,
-    SENSOR_SYNC_THRESHOLD,
     HDF5_WRITE_BATCH_SIZE,
+    MAX_CHUNK_GAP,
+    MCAP_FILE_PATH,
+    SENSOR_SYNC_THRESHOLD,
 )
+from pipeline.hdf5_writer import HDF5Writer
 from pipeline.reader import MCAPSource
 from pipeline.synchronizer import SensorSynchronizer
-from pipeline.hdf5_writer import HDF5Writer
 
 def main():
     logging.basicConfig(level=logging.INFO)
@@ -26,16 +25,17 @@ def main():
     totalSamples = 0
 
     try:
-        for rawMsg in source.streamMessages():
-            for sample in synchronizer.processMessage(rawMsg.topic, rawMsg.msg, rawMsg.timestamp):
+        for streamMessage in source.streamMessages():
+            for sample in synchronizer.processMessage(streamMessage):
                 sampleBatch.append(sample)
 
                 if len(sampleBatch) >= HDF5_WRITE_BATCH_SIZE:
                     writer.writeBatch(sampleBatch, chunkId)
-                    total_samples += len(sampleBatch)
-                    logger.info(f"Processed {total_samples} samples...")
+                    totalSamples += len(sampleBatch)
+                    logger.info(f"Processed {totalSamples} samples...")
                     sampleBatch = []
                     chunkId += 1
+
 
         finalSamples = list(synchronizer.flushSamples())
         if finalSamples:
@@ -43,7 +43,7 @@ def main():
 
         if sampleBatch:
             writer.writeBatch(sampleBatch, chunkId)
-            total_samples += len(sampleBatch)
+            totalSamples += len(sampleBatch)
 
         logger.info("Finalizing HDF5 file with metadata...")
         writer.finalize(

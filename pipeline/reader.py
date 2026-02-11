@@ -1,16 +1,7 @@
-from pipeline.config import (
-    CAMERA_INTRINSIC_PARAMETERS_TOPIC,
-)
 import logging
-from typing import Any
 from mcap_ros2.reader import read_ros2_messages
-from dataclasses import dataclass
-
-@dataclass
-class RawMessage:
-    topic: str
-    msg: Any
-    timestamp: float
+from pipeline.config import CAMERA_INTRINSIC_PARAMETERS_TOPIC
+from pipeline.dataclasses import StreamMessage
 
 class MCAPSource:
     def __init__(self,dataSourcePath):
@@ -25,16 +16,21 @@ class MCAPSource:
                     topic = msg.channel.topic
                     rosMsg = msg.ros_msg
 
-                    timestamp = self.extractTimestamp(rosMsg,
-                                                      msg.log_time.timestamp())
-                    
+                    timestamp = self.extractTimestamp(
+                        rosMsg,
+                        msg.log_time.timestamp()
+                    )
+
                     if topic == CAMERA_INTRINSIC_PARAMETERS_TOPIC and self.cameraMetadata is None:
                         self.cameraMetadata= rosMsg
                         self.logger.info(f"Captured camera metadata from {topic}")
-                                         
-                    yield RawMessage(topic=topic,
-                                     msg = rosMsg,
-                                     timestamp = timestamp)
+
+                    yield StreamMessage(
+                        topic=topic,
+                        msg=rosMsg,
+                        timestamp=timestamp,
+                    )
+
         except FileNotFoundError:
             self.logger.error(f"MCAP file not found: {self.dataSourcePath}")
             raise
@@ -43,7 +39,6 @@ class MCAPSource:
             raise
 
     def extractTimestamp(self, rosMsg, mcapLogTime):
-
         if hasattr(rosMsg, "header") and hasattr(rosMsg.header, "stamp"):
             return rosMsg.header.stamp.sec + (rosMsg.header.stamp.nanosec * 1e-9)
         

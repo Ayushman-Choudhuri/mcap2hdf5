@@ -1,31 +1,20 @@
-from pipeline.config import (
-    LIDAR_TOPIC,
-    CAMERA_IMAGE_TOPIC,
-    TF_TOPIC,
-    TF_MATRIX,
-    TIMESTAMP,
-    LIDAR,
-    CAMERA,
-    TRANSFORMS,
-    ROS_MSG,
-    MAX_CHUNK_GAP,
-    SENSOR_SYNC_THRESHOLD,
-) 
 import logging 
-from typing import (
-    Dict,
-    Any,
-)
-from dataclasses import dataclass
-from pipeline.message_converter import MessageConverter
 import numpy as np
-
-@dataclass
-class SyncGroup:
-    timestamp: float
-    lidar: Any
-    camera: Any
-    transforms: Dict[str, Any]
+from pipeline.config import (
+    CAMERA,
+    CAMERA_IMAGE_TOPIC,
+    LIDAR,
+    LIDAR_TOPIC,
+    MAX_CHUNK_GAP,
+    ROS_MSG,
+    TF_CACHE_SIZE,
+    TF_MATRIX,
+    TF_TOPIC,
+    TIMESTAMP,
+    TRANSFORMS,
+)
+from pipeline.dataclasses import StreamMessage
+from pipeline.message_converter import MessageConverter
 
 class SensorSynchronizer:
     def __init__(self, syncThreshold, maxGap):
@@ -46,23 +35,22 @@ class SensorSynchronizer:
         self.tfCache = {}
         self.staticTransforms = None
 
-    def processMessage(self,topic,rosMsg, timestamp):
-        
+    def processMessage(self, streamMessage: StreamMessage):
         chunkEntry = {
-            TIMESTAMP: timestamp,
-            ROS_MSG: rosMsg,
+            TIMESTAMP: streamMessage.timestamp,
+            ROS_MSG: streamMessage.msg,
         }
-        
-        if topic == TF_TOPIC: 
+
+        if streamMessage.topic == TF_TOPIC:
             self.updateTFCache(chunkEntry)
             return
 
-        if topic in [LIDAR_TOPIC, CAMERA_IMAGE_TOPIC]:
-            if self.checkFlushConstraint(topic, timestamp):
+        if streamMessage.topic in [LIDAR_TOPIC, CAMERA_IMAGE_TOPIC]:
+            if self.checkFlushConstraint(streamMessage.topic, streamMessage.timestamp):
                 yield from self.flushSamples()
-            
-            self.chunkBuffer[topic].append(chunkEntry)
-            self.lastTimestamps[topic] = timestamp
+
+            self.chunkBuffer[streamMessage.topic].append(chunkEntry)
+            self.lastTimestamps[streamMessage.topic] = streamMessage.timestamp
 
     def updateTFCache(self, tfEntry):
         for tfStamped in tfEntry[ROS_MSG].transforms:
@@ -80,7 +68,7 @@ class SensorSynchronizer:
                 TF_MATRIX: matrix
             })
 
-            if len(self.tfCache[key]) > 100:
+            if len(self.tfCache[key]) > TF_CACHE_SIZE:
                 self.tfCache[key].pop(0)
 
 
@@ -105,7 +93,7 @@ class SensorSynchronizer:
             
             timeDiff = abs(lidarTimestamp - closestCamera[TIMESTAMP])
 
-            if timeDiff > SENSOR_SYNC_THRESHOLD:
+            if timeDiff > self.syncThreshold:
                 continue
             
             transforms = self.interpolateTransforms(lidarTimestamp)
@@ -140,7 +128,7 @@ class SensorSynchronizer:
             if diff < minDiff:
                 minDiff = diff
                 closestFrame = frame
-        
+                
         return closestFrame
 
     def interpolateTransforms(self, targetTimestamp):
