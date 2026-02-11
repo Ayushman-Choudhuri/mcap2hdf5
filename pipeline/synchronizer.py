@@ -17,7 +17,7 @@ from pipeline.config import (
 from pipeline.dataclasses import StreamMessage
 from pipeline.message_converter import MessageConverter
 
-class SensorSynchronizer:
+class SensorDataSynchronizer:
     def __init__(self, syncThreshold, maxGap):
         self.syncThreshold = syncThreshold
         self.maxGap = maxGap
@@ -103,7 +103,6 @@ class SensorSynchronizer:
                 CAMERA: closestCamera,
                 TRANSFORMS: transforms,
                 TIMESTAMP: lidarTimestamp,
-                CHUNK_ID: None,
             }
             samples.append(sample)
         

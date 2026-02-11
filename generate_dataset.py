@@ -9,14 +9,14 @@ from pipeline.config import (
 )
 from pipeline.hdf5_writer import HDF5Writer
 from pipeline.reader import MCAPSource
-from pipeline.synchronizer import SensorSynchronizer
+from pipeline.synchronizer import SensorDataSynchronizer
 
 def main():
     logging.basicConfig(level=logging.INFO)
     logger = logging.getLogger("Pipeline")
 
     source = MCAPSource(MCAP_FILE_PATH)
-    synchronizer = SensorSynchronizer(SENSOR_SYNC_THRESHOLD, MAX_CHUNK_GAP)
+    synchronizer = SensorDataSynchronizer(SENSOR_SYNC_THRESHOLD, MAX_CHUNK_GAP)
     writer = HDF5Writer(CHUNKS_FILE_PATH)
 
     logger.info("Starting conversion pipeline...")
