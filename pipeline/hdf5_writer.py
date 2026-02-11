@@ -11,6 +11,7 @@ from pipeline.config import (
     CAMERA_P_MATRIX_ATTRIBUTE,
     CAMERA_R_MATRIX_ATTRIBUTE,
     CAMERA_WIDTH_ATTRIBUTE,
+    CHUNK_ID,
     CHUNK_IDS_DATASET_PATH,
     DATA_COMPRESSION_METHOD,
     DISTORTION_MODEL_ATTRIBUTE,
@@ -38,7 +39,7 @@ class HDF5Writer:
         self.h5File = h5py.File(filePath, "w")
         self.initialized = False
 
-    def writeBatch(self, samples, chunkId):
+    def writeBatch(self, samples):
         if not samples: 
             return
         
@@ -58,7 +59,7 @@ class HDF5Writer:
             cameraData = MessageConverter.compressedImageToNumpy(sample[CAMERA][ROS_MSG])
 
             self.h5File[TIMESTAMP_DATASET_PATH][globalIndex] = sample[TIMESTAMP]
-            self.h5File[CHUNK_IDS_DATASET_PATH][globalIndex] = chunkId
+            self.h5File[CHUNK_IDS_DATASET_PATH][globalIndex] = sample[CHUNK_ID]
 
             pointOffset = self.h5File.attrs.get(LIDAR_POINT_OFFSET_ATTRIBUTE, 0)
             numPoints = lidarData.shape[0]

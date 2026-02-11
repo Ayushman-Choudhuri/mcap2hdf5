@@ -1,12 +1,16 @@
 import logging
 from mcap_ros2.reader import read_ros2_messages
-from pipeline.config import CAMERA_INTRINSIC_PARAMETERS_TOPIC
+from pipeline.config import (
+    CAMERA_INTRINSIC_PARAMETERS_TOPIC,
+    TF_STATIC_TOPIC
+)
 from pipeline.dataclasses import StreamMessage
 
 class MCAPSource:
     def __init__(self,dataSourcePath):
         self.dataSourcePath = dataSourcePath
         self.cameraMetadata = None
+        self.staticTransforms = None
         self.logger = logging.getLogger(__name__)
 
     def streamMessages(self):
@@ -24,6 +28,10 @@ class MCAPSource:
                     if topic == CAMERA_INTRINSIC_PARAMETERS_TOPIC and self.cameraMetadata is None:
                         self.cameraMetadata= rosMsg
                         self.logger.info(f"Captured camera metadata from {topic}")
+
+                    if topic == TF_STATIC_TOPIC and self.staticTransforms is None:
+                        self.staticTransforms = rosMsg
+                        self.logger.info(f"Captured static transforms from {topic}")
 
                     yield StreamMessage(
                         topic=topic,
@@ -51,10 +59,8 @@ class MCAPSource:
     def getCameraMetadata(self):
         return self.cameraMetadata
 
-
-        
-
-        
+    def getStaticTransforms(self):
+        return self.staticTransforms
         
 
     

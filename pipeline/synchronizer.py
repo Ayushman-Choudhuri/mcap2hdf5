@@ -3,6 +3,7 @@ import numpy as np
 from pipeline.config import (
     CAMERA,
     CAMERA_IMAGE_TOPIC,
+    CHUNK_ID,
     LIDAR,
     LIDAR_TOPIC,
     MAX_CHUNK_GAP,
@@ -16,7 +17,7 @@ from pipeline.config import (
 from pipeline.dataclasses import StreamMessage
 from pipeline.message_converter import MessageConverter
 
-class SensorSynchronizer:
+class SensorDataSynchronizer:
     def __init__(self, syncThreshold, maxGap):
         self.syncThreshold = syncThreshold
         self.maxGap = maxGap
@@ -33,7 +34,6 @@ class SensorSynchronizer:
         }
 
         self.tfCache = {}
-        self.staticTransforms = None
 
     def processMessage(self, streamMessage: StreamMessage):
         chunkEntry = {
