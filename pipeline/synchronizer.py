@@ -3,6 +3,7 @@ import numpy as np
 from pipeline.config import (
     CAMERA,
     CAMERA_IMAGE_TOPIC,
+    CHUNK_ID,
     LIDAR,
     LIDAR_TOPIC,
     MAX_CHUNK_GAP,
@@ -33,7 +34,6 @@ class SensorSynchronizer:
         }
 
         self.tfCache = {}
-        self.staticTransforms = None
 
     def processMessage(self, streamMessage: StreamMessage):
         chunkEntry = {
@@ -103,6 +103,7 @@ class SensorSynchronizer:
                 CAMERA: closestCamera,
                 TRANSFORMS: transforms,
                 TIMESTAMP: lidarTimestamp,
+                CHUNK_ID: None,
             }
             samples.append(sample)
         
