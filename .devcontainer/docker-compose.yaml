@@ -1,0 +1,15 @@
+services:
+  devcontainer:
+    build:
+      context: ..
+      dockerfile: .devcontainer/Dockerfile
+    volumes:
+      # Mount the project root into the container. data/raw and data/processed
+      # are subdirectories, so input MCAP files and generated HDF5 output both
+      # persist on the host across container rebuilds.
+      - ..:/workspace:cached
+    environment:
+      - PYTHONPATH=/workspace
+    command: sleep infinity
+    stdin_open: true
+    tty: true
