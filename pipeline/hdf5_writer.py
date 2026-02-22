@@ -84,12 +84,12 @@ class HDF5Writer:
                         dtype=np.float32,
                         compression=DATA_COMPRESSION_METHOD,
                     )
-                
+
                 dataset = self.h5File[datasetPath]
                 dataset.resize((globalIndex+1,4,4))
                 dataset[globalIndex] = tfMatrix
-            
-            self.h5File.attrs[NUM_SAMPLES_ATTRIBUTE] = startIndex + numNewSamples
+
+        self.h5File.attrs[NUM_SAMPLES_ATTRIBUTE] = startIndex + numNewSamples
 
 
     def createDatasets(self,sampleTemplate):
@@ -161,6 +161,11 @@ class HDF5Writer:
         newSize = max(minSize, currentSize * 2)
         self.h5File[LIDAR_DATA_DATASET_PATH].resize((newSize, 4))
 
+    def __del__(self):
+        if hasattr(self, "h5File") and self.h5File.id.valid:
+            self.logger.warning("HDF5Writer was not finalized — closing file in destructor.")
+            self.h5File.close()
+
     def finalize(self, cameraMetadata, staticTransforms):
         numSamples = self.h5File.attrs.get(NUM_SAMPLES_ATTRIBUTE, 0)
         lidarPointOffset = self.h5File.attrs.get(LIDAR_POINT_OFFSET_ATTRIBUTE, 0)
@@ -194,7 +199,7 @@ class HDF5Writer:
         print(f"\nDataset Statistics:")
         print(f"  Total samples: {numSamples}")
         print(f"  Total lidar points: {lidarPointOffset}")
-        avg_points = lidarPointOffset / numSamples if numSamples > 0 else 0
-        print(f"  Average points per sample: {avg_points:.1f}")
+        avgPoints = lidarPointOffset / numSamples if numSamples > 0 else 0
+        print(f"  Average points per sample: {avgPoints:.1f}")
 
         self.h5File.close()
