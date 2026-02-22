@@ -6,7 +6,6 @@ from pipeline.config import (
     CHUNK_ID,
     LIDAR,
     LIDAR_TOPIC,
-    MAX_CHUNK_GAP,
     ROS_MSG,
     TF_CACHE_SIZE,
     TF_MATRIX,
@@ -76,7 +75,7 @@ class SensorDataSynchronizer:
         lastTimestamp = self.lastTimestamps.get(sensorTopicName)
         if lastTimestamp is None:
             return False
-        return (currentTimestamp - lastTimestamp) > MAX_CHUNK_GAP
+        return (currentTimestamp - lastTimestamp) > self.maxGap
 
     def flushSamples(self):
         lidarFrames = self.chunkBuffer[LIDAR_TOPIC]
@@ -109,7 +108,6 @@ class SensorDataSynchronizer:
         self.chunkBuffer = {
             LIDAR_TOPIC: [],
             CAMERA_IMAGE_TOPIC: [],
-            TF_TOPIC: [],
         }
         self.lastTimestamps = {key: None for key in self.lastTimestamps}
         
@@ -157,9 +155,9 @@ class SensorDataSynchronizer:
                     
                     alpha = (targetTimestamp - before[TIMESTAMP]) / (after[TIMESTAMP] - before[TIMESTAMP])
                     alpha = np.clip(alpha, 0.0, 1.0)
-                    
-                    transforms[key] = self.interpolateMatrix(before[TF_MATRIX], after[TF_MATRIX], alpha)
-            
+
+                    transforms[key] = MessageConverter.interpolateMatrix(before[TF_MATRIX], after[TF_MATRIX], alpha)
+
             elif beforeIdx is not None:
                 transforms[key] = tfList[beforeIdx][TF_MATRIX]
             elif afterIdx is not None:
