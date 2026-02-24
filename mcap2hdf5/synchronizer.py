@@ -1,6 +1,6 @@
-import logging 
+import logging
 import numpy as np
-from pipeline.config import (
+from mcap2hdf5.config import (
     CAMERA,
     CAMERA_IMAGE_TOPIC,
     CHUNK_ID,
@@ -13,8 +13,8 @@ from pipeline.config import (
     TIMESTAMP,
     TRANSFORMS,
 )
-from pipeline.dataclasses import StreamMessage
-from pipeline.message_converter import MessageConverter
+from mcap2hdf5.dataclasses import StreamMessage
+from mcap2hdf5.message_converter import MessageConverter
 
 class SensorDataSynchronizer:
     def __init__(self, syncThreshold, maxGap):
@@ -57,10 +57,10 @@ class SensorDataSynchronizer:
             frameId = tfStamped.header.frame_id
             childFrameId = tfStamped.child_frame_id
             key = f"{frameId}_to_{childFrameId}"
-            
+
             if key not in self.tfCache:
                 self.tfCache[key] = []
-            
+
             matrix = MessageConverter.transformToMatrix(tfStamped.transform)
             self.tfCache[key].append({
                 TIMESTAMP: timestamp,
@@ -89,14 +89,14 @@ class SensorDataSynchronizer:
 
             if closestCamera is None:
                 continue
-            
+
             timeDiff = abs(lidarTimestamp - closestCamera[TIMESTAMP])
 
             if timeDiff > self.syncThreshold:
                 continue
-            
+
             transforms = self.interpolateTransforms(lidarTimestamp)
-            
+
             sample = {
                 LIDAR: lidarEntry,
                 CAMERA: closestCamera,
@@ -104,55 +104,55 @@ class SensorDataSynchronizer:
                 TIMESTAMP: lidarTimestamp,
             }
             samples.append(sample)
-        
+
         self.chunkBuffer = {
             LIDAR_TOPIC: [],
             CAMERA_IMAGE_TOPIC: [],
         }
         self.lastTimestamps = {key: None for key in self.lastTimestamps}
-        
+
         for sample in samples:
             yield sample
 
     def findClosestFrame(self, targetTimestamp, frames):
         if not frames:
             return None
-        
+
         closestFrame = None
         minDiff = float('inf')
-        
+
         for frame in frames:
             diff = abs(frame[TIMESTAMP] - targetTimestamp)
             if diff < minDiff:
                 minDiff = diff
                 closestFrame = frame
-                
+
         return closestFrame
 
     def interpolateTransforms(self, targetTimestamp):
         transforms = {}
-        
+
         for key, tfList in self.tfCache.items():
             if not tfList:
                 continue
-            
+
             beforeIdx = None
             afterIdx = None
-            
+
             for index, tf in enumerate(tfList):
                 if tf[TIMESTAMP] <= targetTimestamp:
                     beforeIdx = index
                 if tf[TIMESTAMP] >= targetTimestamp and afterIdx is None:
                     afterIdx = index
                     break
-            
+
             if beforeIdx is not None and afterIdx is not None:
                 if beforeIdx == afterIdx:
                     transforms[key] = tfList[beforeIdx][TF_MATRIX]
                 else:
                     before = tfList[beforeIdx]
                     after = tfList[afterIdx]
-                    
+
                     alpha = (targetTimestamp - before[TIMESTAMP]) / (after[TIMESTAMP] - before[TIMESTAMP])
                     alpha = np.clip(alpha, 0.0, 1.0)
 
@@ -162,5 +162,5 @@ class SensorDataSynchronizer:
                 transforms[key] = tfList[beforeIdx][TF_MATRIX]
             elif afterIdx is not None:
                 transforms[key] = tfList[afterIdx][TF_MATRIX]
-        
+
         return transforms
