@@ -1,0 +1,20 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "mcap2hdf5"
+version = "0.1.0"
+requires-python = ">=3.10"
+dependencies = [
+    "numpy>=1.22.0",
+    "scipy>=1.10.0",
+    "h5py>=3.8.0",
+    "mcap-ros2-support>=0.5.0",
+    "mcap>=1.1.0",
+    "opencv-python-headless>=4.7.0.0",
+    "torch>=2.0.0",
+]
+
+[project.scripts]
+mcap2hdf5 = "mcap2hdf5.cli:app"
