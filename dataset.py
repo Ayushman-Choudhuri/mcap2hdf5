@@ -1,7 +1,7 @@
 import h5py
 import logging
 import numpy as np
-from pipeline.config import (
+from mcap2hdf5.config import (
     CAMERA_IMAGES_DATASET_PATH,
     CHUNKS_FILE_PATH,
     LIDAR_COUNTS_DATASET_PATH,

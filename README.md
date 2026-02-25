@@ -1,4 +1,4 @@
-# mcap2ml : A cli tool to convert raw robot data into ML datasets. 
+# mcap2hdf5 : A cli tool to convert raw robot data into ML ready datasets. 
 
 <p align="center">
   <img src="https://img.shields.io/badge/Python-3.10%2B-3776AB?style=flat-square&logo=python&logoColor=white"/>
@@ -9,7 +9,7 @@
 </p>
 
 <p align="center">
-  A streaming ETL pipeline that converts raw ROS2 multi-modal robotics telemetry (MCAP) into temporally-synchronized, O(1)-access HDF5 datasets — ready to plug directly into a PyTorch training loop.
+  A pipeline that converts raw ROS2 multimodal robotics telemetry (MCAP) into temporally-synchronized, O(1)-access HDF5 datasets.
 </p>
 
 ---
@@ -82,16 +82,16 @@ points = hdf5["lidar/data"][offset : offset + count]  # shape: (count, 4)
 
 ## Quick Start
 
-**1. Install dependencies** (Python 3.10+ recommended)
+**1. Install** (Python 3.10+ required)
 ```bash
-pip install -r requirements.txt
+pip install -e .
 ```
 
 **2. Place your MCAP file**
 ```
 data/raw/kitti.mcap
 ```
-Topic names and file paths are configured in `pipeline/config.py`.
+Topic names and file paths are configured in `mcap2hdf5/config.py`.
 
 **3. Run the pipeline**
 ```bash
@@ -117,7 +117,7 @@ Batch loaded: Image shape torch.Size([8, 3, H, W]), LiDAR frames in batch: 8
 
 ## Configuration
 
-All pipeline parameters are centralized in `pipeline/config.py`:
+All pipeline parameters are centralized in `mcap2hdf5/config.py`:
 
 | Parameter | Default | Description |
 |:---|:---|:---|

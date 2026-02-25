@@ -1,5 +1,5 @@
 import logging
-from pipeline.config import (
+from mcap2hdf5.config import (
     CHUNKS_FILE_PATH,
     CHUNK_ID,
     HDF5_WRITE_BATCH_SIZE,
@@ -7,9 +7,9 @@ from pipeline.config import (
     MCAP_FILE_PATH,
     SENSOR_SYNC_THRESHOLD,
 )
-from pipeline.hdf5_writer import HDF5Writer
-from pipeline.reader import MCAPSource
-from pipeline.synchronizer import SensorDataSynchronizer
+from mcap2hdf5.hdf5_writer import HDF5Writer
+from mcap2hdf5.reader import MCAPSource
+from mcap2hdf5.synchronizer import SensorDataSynchronizer
 
 def main():
     logging.basicConfig(level=logging.INFO)

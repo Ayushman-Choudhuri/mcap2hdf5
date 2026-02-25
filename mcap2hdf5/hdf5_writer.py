@@ -1,7 +1,7 @@
 import h5py
 import logging
 import numpy as np
-from pipeline.config import (
+from mcap2hdf5.config import (
     CAMERA,
     CAMERA_D_MATRIX_ATTRIBUTE,
     CAMERA_GROUP,
@@ -30,7 +30,7 @@ from pipeline.config import (
     TRANSFORMS,
     TRANSFORMS_GROUP,
 )
-from pipeline.message_converter import MessageConverter
+from mcap2hdf5.message_converter import MessageConverter
 
 class HDF5Writer:
     def __init__(self, filePath):
@@ -40,9 +40,9 @@ class HDF5Writer:
         self.initialized = False
 
     def writeBatch(self, samples):
-        if not samples: 
+        if not samples:
             return
-        
+
         if not self.initialized:
             self.createDatasets(samples[0])
             self.initialized = True
@@ -66,7 +66,7 @@ class HDF5Writer:
 
             if pointOffset + numPoints > self.h5File[LIDAR_DATA_DATASET_PATH].shape[0]:
                 self.resizeLidarData(pointOffset+numPoints)
-            
+
             self.h5File[LIDAR_DATA_DATASET_PATH][pointOffset:pointOffset + numPoints] = lidarData
             self.h5File[LIDAR_OFFSETS_DATASET_PATH][globalIndex] = pointOffset
             self.h5File[LIDAR_COUNTS_DATASET_PATH][globalIndex] = numPoints
@@ -106,7 +106,7 @@ class HDF5Writer:
             maxshape=(None,),
             dtype=np.int32
         )
-        
+
         self.h5File.create_group(LIDAR_GROUP)
         self.h5File.create_dataset(
             LIDAR_DATA_DATASET_PATH,
@@ -128,7 +128,7 @@ class HDF5Writer:
             maxshape=(None,),
             dtype=np.int32
         )
-        
+
         self.h5File.create_group(CAMERA_GROUP)
         cameraData = MessageConverter.compressedImageToNumpy(sampleTemplate[CAMERA][ROS_MSG])
         height, width, channels = cameraData.shape
@@ -140,20 +140,20 @@ class HDF5Writer:
             compression=DATA_COMPRESSION_METHOD,
             chunks=(1, height, width, channels)
         )
-        
+
         self.h5File.create_group(TRANSFORMS_GROUP)
-        
+
         self.h5File.attrs[NUM_SAMPLES_ATTRIBUTE] = 0
         self.h5File.attrs[LIDAR_POINT_OFFSET_ATTRIBUTE] = 0
 
-    def resizeDatasets(self, newSize):        
+    def resizeDatasets(self, newSize):
         self.h5File[TIMESTAMP_DATASET_PATH].resize((newSize,))
         self.h5File[CHUNK_IDS_DATASET_PATH].resize((newSize,))
         self.h5File[LIDAR_OFFSETS_DATASET_PATH].resize((newSize,))
         self.h5File[LIDAR_COUNTS_DATASET_PATH].resize((newSize,))
-        self.h5File[CAMERA_IMAGES_DATASET_PATH].resize((newSize, 
-                                                self.h5File[CAMERA_IMAGES_DATASET_PATH].shape[1], 
-                                                self.h5File[CAMERA_IMAGES_DATASET_PATH].shape[2], 
+        self.h5File[CAMERA_IMAGES_DATASET_PATH].resize((newSize,
+                                                self.h5File[CAMERA_IMAGES_DATASET_PATH].shape[1],
+                                                self.h5File[CAMERA_IMAGES_DATASET_PATH].shape[2],
                                                 self.h5File[CAMERA_IMAGES_DATASET_PATH].shape[3]))
 
     def resizeLidarData(self, minSize):
@@ -169,9 +169,9 @@ class HDF5Writer:
     def finalize(self, cameraMetadata, staticTransforms):
         numSamples = self.h5File.attrs.get(NUM_SAMPLES_ATTRIBUTE, 0)
         lidarPointOffset = self.h5File.attrs.get(LIDAR_POINT_OFFSET_ATTRIBUTE, 0)
-        
+
         self.h5File[LIDAR_DATA_DATASET_PATH].resize((lidarPointOffset, 4))
-        
+
         if cameraMetadata:
             self.h5File.attrs[CAMERA_K_MATRIX_ATTRIBUTE] = np.array(cameraMetadata.k, dtype=np.float32).reshape(3, 3)
             self.h5File.attrs[CAMERA_D_MATRIX_ATTRIBUTE] = np.array(cameraMetadata.d, dtype=np.float32)
@@ -187,15 +187,15 @@ class HDF5Writer:
             staticGroup = self.h5File.create_group("static_transforms")
             for tfStamped in staticTransforms.transforms:
                 matrix = MessageConverter.transformToMatrix(tfStamped.transform)
-                
+
                 frameId = tfStamped.header.frame_id
                 childFrameId = tfStamped.child_frame_id
                 key = f"{frameId}_to_{childFrameId}"
-                
+
                 staticGroup.create_dataset(key, data=matrix, dtype=np.float32)
         else:
             self.logger.warning("No Static TF found to persist!")
-        
+
         print(f"\nDataset Statistics:")
         print(f"  Total samples: {numSamples}")
         print(f"  Total lidar points: {lidarPointOffset}")

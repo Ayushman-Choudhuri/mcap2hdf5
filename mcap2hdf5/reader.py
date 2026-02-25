@@ -1,10 +1,10 @@
 import logging
 from mcap_ros2.reader import read_ros2_messages
-from pipeline.config import (
+from mcap2hdf5.config import (
     CAMERA_INTRINSIC_PARAMETERS_TOPIC,
     TF_STATIC_TOPIC
 )
-from pipeline.dataclasses import StreamMessage
+from mcap2hdf5.dataclasses import StreamMessage
 
 class MCAPSource:
     def __init__(self,dataSourcePath):
@@ -49,18 +49,15 @@ class MCAPSource:
     def extractTimestamp(self, rosMsg, mcapLogTime):
         if hasattr(rosMsg, "header") and hasattr(rosMsg.header, "stamp"):
             return rosMsg.header.stamp.sec + (rosMsg.header.stamp.nanosec * 1e-9)
-        
+
         if hasattr(rosMsg, "transforms") and len(rosMsg.transforms) > 0:
             t0 = rosMsg.transforms[0]
             return t0.header.stamp.sec + (t0.header.stamp.nanosec * 1e-9)
 
         return mcapLogTime
-    
+
     def getCameraMetadata(self):
         return self.cameraMetadata
 
     def getStaticTransforms(self):
         return self.staticTransforms
-        
-
-    
