@@ -43,7 +43,8 @@ def main():
             
             if flushEventTriggered:
                 logger.info(
-                    f"Flush event triggered for chunk {chunkId} at timestamp {streamMessage.timestamp}."
+                    f"Flush event triggered for chunk {chunkId}"
+                    f" at timestamp {streamMessage.timestamp}."
                 )
                 chunkId += 1
         
