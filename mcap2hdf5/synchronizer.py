@@ -1,9 +1,10 @@
 import logging
+
 import numpy as np
+
 from mcap2hdf5.config import (
     CAMERA,
     CAMERA_IMAGE_TOPIC,
-    CHUNK_ID,
     LIDAR,
     LIDAR_TOPIC,
     ROS_MSG,
@@ -15,6 +16,7 @@ from mcap2hdf5.config import (
 )
 from mcap2hdf5.dataclasses import StreamMessage
 from mcap2hdf5.message_converter import MessageConverter
+
 
 class SensorDataSynchronizer:
     def __init__(self, syncThreshold, maxGap):
@@ -153,10 +155,14 @@ class SensorDataSynchronizer:
                     before = tfList[beforeIdx]
                     after = tfList[afterIdx]
 
-                    alpha = (targetTimestamp - before[TIMESTAMP]) / (after[TIMESTAMP] - before[TIMESTAMP])
+                    alpha = (targetTimestamp - before[TIMESTAMP]) / (
+                        after[TIMESTAMP] - before[TIMESTAMP]
+                    )
                     alpha = np.clip(alpha, 0.0, 1.0)
 
-                    transforms[key] = MessageConverter.interpolateMatrix(before[TF_MATRIX], after[TF_MATRIX], alpha)
+                    transforms[key] = MessageConverter.interpolateMatrix(
+                        before[TF_MATRIX], after[TF_MATRIX], alpha
+                    )
 
             elif beforeIdx is not None:
                 transforms[key] = tfList[beforeIdx][TF_MATRIX]

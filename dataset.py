@@ -1,6 +1,10 @@
-import h5py
 import logging
-import numpy as np
+from typing import Any, Dict, List, Optional
+
+import h5py
+import torch
+from torch.utils.data import DataLoader, Dataset
+
 from mcap2hdf5.config import (
     CAMERA_IMAGES_DATASET_PATH,
     CHUNKS_FILE_PATH,
@@ -8,11 +12,9 @@ from mcap2hdf5.config import (
     LIDAR_DATA_DATASET_PATH,
     LIDAR_OFFSETS_DATASET_PATH,
     NUM_SAMPLES_ATTRIBUTE,
-    TIMESTAMP_DATASET_PATH
+    TIMESTAMP_DATASET_PATH,
 )
-import torch
-from torch.utils.data import Dataset, DataLoader
-from typing import Dict, List, Any, Optional
+
 
 class KittiHDF5Dataset(Dataset):
     def __init__(self, h5FilePath: str, transform: Optional[Any] = None):
