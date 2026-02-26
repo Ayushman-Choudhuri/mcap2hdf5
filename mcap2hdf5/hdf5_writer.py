@@ -34,6 +34,7 @@ from mcap2hdf5.config import (
 )
 from mcap2hdf5.message_converter import MessageConverter
 
+
 class HDF5Writer:
     def __init__(self, filePath):
         self.filePath = filePath

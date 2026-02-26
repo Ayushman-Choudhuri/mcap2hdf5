@@ -17,6 +17,7 @@ from mcap2hdf5.config import (
 from mcap2hdf5.dataclasses import StreamMessage
 from mcap2hdf5.message_converter import MessageConverter
 
+
 class SensorDataSynchronizer:
     def __init__(self, syncThreshold, maxGap):
         self.syncThreshold = syncThreshold

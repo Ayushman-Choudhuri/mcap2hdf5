@@ -12,6 +12,7 @@ from mcap2hdf5.hdf5_writer import HDF5Writer
 from mcap2hdf5.reader import MCAPSource
 from mcap2hdf5.synchronizer import SensorDataSynchronizer
 
+
 def main():
     logging.basicConfig(level=logging.INFO)
     logger = logging.getLogger("Pipeline")

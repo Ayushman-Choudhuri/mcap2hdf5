@@ -15,6 +15,7 @@ from mcap2hdf5.config import (
     TIMESTAMP_DATASET_PATH,
 )
 
+
 class KittiHDF5Dataset(Dataset):
     def __init__(self, h5FilePath: str, transform: Optional[Any] = None):
         self.h5FilePath = h5FilePath

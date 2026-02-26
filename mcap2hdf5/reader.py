@@ -8,6 +8,7 @@ from mcap2hdf5.config import (
 )
 from mcap2hdf5.dataclasses import StreamMessage
 
+
 class MCAPSource:
     def __init__(self,dataSourcePath):
         self.dataSourcePath = dataSourcePath
