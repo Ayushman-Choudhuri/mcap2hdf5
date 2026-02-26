@@ -1,8 +1,10 @@
 import logging
+
 from mcap_ros2.reader import read_ros2_messages
+
 from mcap2hdf5.config import (
     CAMERA_INTRINSIC_PARAMETERS_TOPIC,
-    TF_STATIC_TOPIC
+    TF_STATIC_TOPIC,
 )
 from mcap2hdf5.dataclasses import StreamMessage
 

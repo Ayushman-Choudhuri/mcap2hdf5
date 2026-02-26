@@ -1,7 +1,8 @@
 import logging
+
 from mcap2hdf5.config import (
-    CHUNKS_FILE_PATH,
     CHUNK_ID,
+    CHUNKS_FILE_PATH,
     HDF5_WRITE_BATCH_SIZE,
     MAX_CHUNK_GAP,
     MCAP_FILE_PATH,
@@ -41,7 +42,9 @@ def main():
                     sampleBatch = []
             
             if flushEventTriggered:
-                logger.info(f"Flush event triggered for chunk {chunkId} at timestamp {streamMessage.timestamp}.")
+                logger.info(
+                    f"Flush event triggered for chunk {chunkId} at timestamp {streamMessage.timestamp}."
+                )
                 chunkId += 1
         
         """ Handling of residual samples """
@@ -63,7 +66,9 @@ def main():
     except Exception as e:
         logger.error(f"An error occurred during dataset generation: {e}")
 
-    logger.info(f"Dataset generation completed with {totalSamples} samples across {chunkId+1} chunks.")
+    logger.info(
+        f"Dataset generation completed with {totalSamples} samples across {chunkId+1} chunks."
+    )
 
 if __name__ == "__main__":
     main()

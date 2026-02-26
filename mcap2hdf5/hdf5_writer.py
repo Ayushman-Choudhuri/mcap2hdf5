@@ -1,6 +1,8 @@
-import h5py
 import logging
+
+import h5py
 import numpy as np
+
 from mcap2hdf5.config import (
     CAMERA,
     CAMERA_D_MATRIX_ATTRIBUTE,
@@ -173,10 +175,18 @@ class HDF5Writer:
         self.h5File[LIDAR_DATA_DATASET_PATH].resize((lidarPointOffset, 4))
 
         if cameraMetadata:
-            self.h5File.attrs[CAMERA_K_MATRIX_ATTRIBUTE] = np.array(cameraMetadata.k, dtype=np.float32).reshape(3, 3)
-            self.h5File.attrs[CAMERA_D_MATRIX_ATTRIBUTE] = np.array(cameraMetadata.d, dtype=np.float32)
-            self.h5File.attrs[CAMERA_R_MATRIX_ATTRIBUTE] = np.array(cameraMetadata.r, dtype=np.float32).reshape(3, 3)
-            self.h5File.attrs[CAMERA_P_MATRIX_ATTRIBUTE] = np.array(cameraMetadata.p, dtype=np.float32).reshape(3, 4)
+            self.h5File.attrs[CAMERA_K_MATRIX_ATTRIBUTE] = (
+                np.array(cameraMetadata.k, dtype=np.float32).reshape(3, 3)
+            )
+            self.h5File.attrs[CAMERA_D_MATRIX_ATTRIBUTE] = (
+                np.array(cameraMetadata.d, dtype=np.float32)
+            )
+            self.h5File.attrs[CAMERA_R_MATRIX_ATTRIBUTE] = (
+                np.array(cameraMetadata.r, dtype=np.float32).reshape(3, 3)
+            )
+            self.h5File.attrs[CAMERA_P_MATRIX_ATTRIBUTE] = (
+                np.array(cameraMetadata.p, dtype=np.float32).reshape(3, 4)
+            )
             self.h5File.attrs[DISTORTION_MODEL_ATTRIBUTE] = str(cameraMetadata.distortion_model)
             self.h5File.attrs[CAMERA_WIDTH_ATTRIBUTE] = int(cameraMetadata.width)
             self.h5File.attrs[CAMERA_HEIGHT_ATTRIBUTE] = int(cameraMetadata.height)
@@ -196,7 +206,7 @@ class HDF5Writer:
         else:
             self.logger.warning("No Static TF found to persist!")
 
-        print(f"\nDataset Statistics:")
+        print("\nDataset Statistics:")
         print(f"  Total samples: {numSamples}")
         print(f"  Total lidar points: {lidarPointOffset}")
         avgPoints = lidarPointOffset / numSamples if numSamples > 0 else 0
