@@ -31,8 +31,8 @@ class MessageConverter:
         for index, fieldName in enumerate(fieldNames):
             field = fieldMap[fieldName]
             fieldDtype = np.dtype(POINTFIELD_DATATYPE_MAP[field.datatype])
-            end = field.offset + fieldDtype.itemsize
-            fieldBytes = pointByteBuffer[:, field.offset:end].tobytes()
+            fieldEndByte = field.offset + fieldDtype.itemsize
+            fieldBytes = pointByteBuffer[:, field.offset:fieldEndByte].tobytes()
             pointCloud[:, index] = np.frombuffer(fieldBytes, dtype=fieldDtype)
 
         return pointCloud
