@@ -101,7 +101,64 @@ Field names are a parameter rather than a hardcoded constant for two reasons:
 
 ## 5.0 `interpolateMatrix`
 
-*To be documented.*
+### 5.1 Background: Interpolating Between Two Rotations
+
+In `synchronizer.py`, TF messages record the exact pose of a sensor at specific timestamps. A LiDAR scan arrives at a timestamp that falls between two TF readings, so the transform must be reconstructed by interpolation. The translation component (x, y, z) can be interpolated with a plain linear lerp. Rotation requires a different approach.
+
+You can't average two orientations like scalar numbers — rotations don't work that way mathematically. Internally, rotations are represented as **quaternions**: 4-component unit vectors that live on the surface of a 4D unit sphere. The path between two rotations is an arc on that sphere. Two methods exist for traversing it:
+
+#### 5.1.1 NLERP — Normalized Linear Interpolation
+
+The naive approach: draw a straight line between the two quaternions through the interior of the sphere, find the point at `alpha` along that line, then project it back onto the surface by normalizing.
+
+```
+q = lerp(q1, q2, alpha)
+q = q / |q|
+```
+
+The straight-line shortcut does not follow the arc — the interpolated rotation moves faster near the midpoint and slower near the endpoints. Angular velocity is not constant.
+
+#### 5.1.2 SLERP — Spherical Linear Interpolation
+
+The correct approach: walk along the surface of the sphere (the great-circle arc) using sin-weighted blending:
+
+```
+q = sin((1-α)·θ)/sin(θ) · q1  +  sin(α·θ)/sin(θ) · q2
+```
+
+where `θ` is the total angle between the two rotations. This gives **constant angular velocity** throughout the interpolation.
+
+#### 5.1.3 Why SLERP for This Use Case
+
+A real sensor rotates at physically constant angular velocity between measurements. SLERP matches this physical reality; NLERP introduces a timing distortion — the reconstructed pose at a given timestamp won't actually be where the sensor was at that moment. For a dataset used to train or evaluate a model, that's a systematic geometric error baked into every frame.
+
+NLERP and SLERP converge when the angle between the two rotations is very small, so the difference is negligible when TFs are published at high frequency. But TF entries are cached over a rolling window (`TF_CACHE_SIZE`) and may bracket larger angular gaps, making SLERP the correct default.
+
+### 5.2 Implementation
+
+```python
+def interpolateMatrix(startMatrix, endMatrix, alpha=0.5)
+```
+
+Translation and rotation are handled independently:
+
+- **Translation:** plain linear lerp — `(1 - alpha) * t1 + alpha * t2`.
+- **Rotation:** `scipy.spatial.transform.Slerp`, which also handles quaternion sign disambiguation (the fact that `q` and `-q` represent the same rotation but give the wrong shortest-path arc without a sign correction) internally.
+
+`alpha` is the normalized time parameter in `[0, 1]`, computed in `synchronizer.py` as:
+
+```python
+alpha = (targetTimestamp - before[TIMESTAMP]) / (after[TIMESTAMP] - before[TIMESTAMP])
+alpha = np.clip(alpha, 0.0, 1.0)
+```
+
+`np.clip` guards against floating-point edge cases where the two timestamps are nearly equal.
+
+The default `alpha=0.5` is a convenience for direct or test usage and has no effect on production code, which always passes an explicitly computed alpha.
+
+### 5.3 API Design
+
+The function takes and returns full `(4, 4)` homogeneous matrices rather than separate translation/rotation components so callers never need to decompose or recompose a transform. The bottom row `[0, 0, 0, 1]` is preserved from `np.eye(4)` and never modified.
 
 ---
 
