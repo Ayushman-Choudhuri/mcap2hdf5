@@ -2,6 +2,10 @@ name: CI
 
 on:
   push:
+    paths:
+      - "mcap2hdf5/**"
+      - "tests/**"
+      - "pyproject.toml"
 
 jobs:
   lint-and-test:
