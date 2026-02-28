@@ -2,24 +2,39 @@ import cv2
 import numpy as np
 from scipy.spatial.transform import Rotation as R
 
-LIDAR_MESSAGE_FIELDS = ["x", "y", "z", "intensity"]
+DEFAULT_LIDAR_MESSAGE_FIELDS = ["x", "y", "z", "intensity"]
+
+POINTFIELD_DATATYPE_MAP = {
+    1: np.int8,
+    2: np.uint8,
+    3: np.int16,
+    4: np.uint16,
+    5: np.int32,
+    6: np.uint32,
+    7: np.float32,
+    8: np.float64,
+}
 
 class MessageConverter:
     @staticmethod
-    def lidarToNumpy(lidarMsg):
-        fieldMap = {
-            field.name: field
-            for field in lidarMsg.fields
-        }
-        for name in LIDAR_MESSAGE_FIELDS:
-            if name not in fieldMap:
-                raise ValueError(f"PointCloud2 missing field: {name}")
+    def lidarToNumpy(lidarMsg, fieldNames=DEFAULT_LIDAR_MESSAGE_FIELDS):
+        fieldMap = {field.name: field for field in lidarMsg.fields}
 
-        pointBuffer = np.frombuffer(lidarMsg.data, dtype=np.uint8).reshape(-1, lidarMsg.point_step)
-        pointCloud = np.empty((len(pointBuffer), 4), dtype=np.float32)
-        for index, name in enumerate(LIDAR_MESSAGE_FIELDS):
-            offset = fieldMap[name].offset
-            pointCloud[:, index] = np.frombuffer(pointBuffer[:, offset:offset + 4].tobytes(), dtype=np.float32)
+        for fieldName in fieldNames:
+            if fieldName not in fieldMap:
+                raise ValueError(f"PointCloud2 missing field: {fieldName}")
+
+        pointByteBuffer = np.frombuffer(lidarMsg.data, dtype=np.uint8)
+        pointByteBuffer = pointByteBuffer.reshape(-1, lidarMsg.point_step)
+        pointCloud = np.empty((len(pointByteBuffer), len(fieldNames)), dtype=np.float32)
+
+        for index, fieldName in enumerate(fieldNames):
+            field = fieldMap[fieldName]
+            fieldDtype = np.dtype(POINTFIELD_DATATYPE_MAP[field.datatype])
+            end = field.offset + fieldDtype.itemsize
+            fieldBytes = pointByteBuffer[:, field.offset:end].tobytes()
+            pointCloud[:, index] = np.frombuffer(fieldBytes, dtype=fieldDtype)
+
         return pointCloud
 
     @staticmethod
