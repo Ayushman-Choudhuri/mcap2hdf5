@@ -2,42 +2,40 @@ import cv2
 import numpy as np
 from scipy.spatial.transform import Rotation as R
 
+DEFAULT_LIDAR_MESSAGE_FIELDS = ["x", "y", "z", "intensity"]
+
+POINTFIELD_DATATYPE_MAP = {
+    1: np.int8,
+    2: np.uint8,
+    3: np.int16,
+    4: np.uint16,
+    5: np.int32,
+    6: np.uint32,
+    7: np.float32,
+    8: np.float64,
+}
 
 class MessageConverter:
     @staticmethod
-    def lidarToNumpy(lidarMsg):
-        dtypeMap = {
-            1: np.int8,
-            2: np.uint8,
-            3: np.int16,
-            4: np.uint16,
-            5: np.int32,
-            6: np.uint32,
-            7: np.float32,
-            8: np.float64,
-        }
+    def lidarToNumpy(lidarMsg, fieldNames=DEFAULT_LIDAR_MESSAGE_FIELDS):
+        fieldMap = {field.name: field for field in lidarMsg.fields}
 
-        fields = []
-        for field in lidarMsg.fields:
-            if field.name in ("x", "y", "z", "intensity"):
-                fields.append(
-                    (field.name,
-                     dtypeMap[field.datatype])
-                )
+        for fieldName in fieldNames:
+            if fieldName not in fieldMap:
+                raise ValueError(f"PointCloud2 missing field: {fieldName}")
 
-        if len(fields) < 4:
-            raise ValueError("PointCloud2 does not contain x,y,z,intensity")
+        pointByteBuffer = np.frombuffer(lidarMsg.data, dtype=np.uint8)
+        pointByteBuffer = pointByteBuffer.reshape(-1, lidarMsg.point_step)
+        pointCloud = np.empty((len(pointByteBuffer), len(fieldNames)), dtype=np.float32)
 
-        cloud = np.frombuffer(lidarMsg.data, dtype=np.dtype(fields))
+        for index, fieldName in enumerate(fieldNames):
+            field = fieldMap[fieldName]
+            fieldDtype = np.dtype(POINTFIELD_DATATYPE_MAP[field.datatype])
+            fieldEndByte = field.offset + fieldDtype.itemsize
+            fieldBytes = pointByteBuffer[:, field.offset:fieldEndByte].tobytes()
+            pointCloud[:, index] = np.frombuffer(fieldBytes, dtype=fieldDtype)
 
-        return np.stack(
-            (cloud["x"],
-             cloud["y"],
-             cloud["z"],
-             cloud["intensity"]
-            ),
-            axis=-1
-        ).astype(np.float32)
+        return pointCloud
 
     @staticmethod
     def compressedImageToNumpy(imageMsg):
