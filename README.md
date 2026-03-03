@@ -1,7 +1,9 @@
-# mcap2hdf5 : A cli tool to convert raw robot data into ML ready datasets. 
+<h1 align="center">mcap2hdf5 : A cli tool to convert raw robot data into ML ready datasets.</h1>
 
-[![build](https://github.com/Ayushman-Choudhuri/mcap2hdf5/actions/workflows/build.yml/badge.svg)](https://github.com/Ayushman-Choudhuri/mcap2hdf5/actions/workflows/build.yml)
-[![style](https://github.com/Ayushman-Choudhuri/mcap2hdf5/actions/workflows/style.yml/badge.svg)](https://github.com/Ayushman-Choudhuri/mcap2hdf5/actions/workflows/style.yml)
+<p align="center">
+  <a href="https://github.com/Ayushman-Choudhuri/mcap2hdf5/actions/workflows/build.yml"><img src="https://github.com/Ayushman-Choudhuri/mcap2hdf5/actions/workflows/build.yml/badge.svg" alt="build"/></a>
+  <a href="https://github.com/Ayushman-Choudhuri/mcap2hdf5/actions/workflows/style.yml"><img src="https://github.com/Ayushman-Choudhuri/mcap2hdf5/actions/workflows/style.yml/badge.svg" alt="style"/></a>
+</p>
 
 <p align="center">
   A pipeline that converts raw ROS2 multimodal robotics telemetry (MCAP) into temporally-synchronized, O(1)-access HDF5 datasets.
