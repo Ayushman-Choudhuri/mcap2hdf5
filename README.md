@@ -1,8 +1,8 @@
 # mcap2hdf5 : A cli tool to convert raw robot data into ML ready datasets. 
 
 <p align="center">
-  <img src="https://github.com/Ayushman-Choudhuri/mcap2hdf5/actions/workflows/ci.yaml/badge.svg?job=test" alt="Build"/>
-  <img src="https://github.com/Ayushman-Choudhuri/mcap2hdf5/actions/workflows/ci.yaml/badge.svg?job=lint" alt="Style"/>
+  <img src="https://github.com/Ayushman-Choudhuri/mcap2hdf5/actions/workflows/ci.yaml/badge.svg" alt="Build"/>
+  <img src="https://github.com/Ayushman-Choudhuri/mcap2hdf5/actions/workflows/style.yaml/badge.svg" alt="Style"/>
 </p>
 
 <p align="center">
