@@ -1,11 +1,8 @@
 # mcap2hdf5 : A cli tool to convert raw robot data into ML ready datasets. 
 
 <p align="center">
-  <img src="https://img.shields.io/badge/Python-3.10%2B-3776AB?style=flat-square&logo=python&logoColor=white"/>
-  <img src="https://img.shields.io/badge/ROS2-MCAP-22314E?style=flat-square&logo=ros&logoColor=white"/>
-  <img src="https://img.shields.io/badge/PyTorch-2.0%2B-EE4C2C?style=flat-square&logo=pytorch&logoColor=white"/>
-  <img src="https://img.shields.io/badge/Storage-HDF5%20%2B%20LZF-FF0000?style=flat-square"/>
-  <img src="https://img.shields.io/badge/Data-LiDAR%20%2B%20Camera%20%2B%20TF-brightgreen?style=flat-square"/>
+  <img src="https://github.com/Ayushman-Choudhuri/mcap2hdf5/actions/workflows/ci.yaml/badge.svg?job=test" alt="Build"/>
+  <img src="https://github.com/Ayushman-Choudhuri/mcap2hdf5/actions/workflows/ci.yaml/badge.svg?job=lint" alt="Style"/>
 </p>
 
 <p align="center">
