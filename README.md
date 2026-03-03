@@ -1,4 +1,4 @@
-<h1 align="center">mcap2hdf5 : A cli tool to convert raw robot data into ML ready datasets.</h1>
+<h1 align="center">mcap2hdf5</h1>
 
 <p align="center">
   <a href="https://github.com/Ayushman-Choudhuri/mcap2hdf5/actions/workflows/build.yml"><img src="https://github.com/Ayushman-Choudhuri/mcap2hdf5/actions/workflows/build.yml/badge.svg" alt="build"/></a>
@@ -6,69 +6,149 @@
 </p>
 
 <p align="center">
-  A pipeline that converts raw ROS2 multimodal robotics telemetry (MCAP) into temporally-synchronized, O(1)-access HDF5 datasets.
+  Convert ROS2 MCAP recordings to temporally-synchronized, randomly-accessible HDF5 datasets for ML training.
 </p>
 
----
-
-## The Problem
-
-Training autonomous driving and robotics perception models requires pairing raw sensor data — LiDAR point clouds, camera images, and coordinate frame transforms — into synchronized, indexed samples. ROS2 bags (MCAP format) store this data as an interleaved stream of typed messages. Naively iterating this stream during training is slow, memory-intensive, and blocks GPU utilization.
-
-This pipeline solves that by doing all the heavy lifting once: reading, temporally synchronizing, interpolating transforms, and writing a compressed, randomly-accessible HDF5 dataset that DataLoaders can index into in O(1).
+> **Status: active development — v0.1.0 pre-release. APIs and schema may change.**
 
 ---
 
-## Key Features
+## 1. What It Does
 
-- **Zero-copy streaming** — `MCAPSource` is a generator that reads one message at a time, keeping memory usage flat regardless of file size.
-- **Temporal synchronization** — each LiDAR frame is paired with the nearest camera frame within a configurable time threshold (`SENSOR_SYNC_THRESHOLD = 50 ms`). Unpaired frames are discarded.
-- **Chunk-aware buffering** — messages are grouped into temporal chunks (gap detection via `MAX_CHUNK_GAP = 150 ms`), preventing cross-sequence pairings at recording boundaries.
-- **SLERP transform interpolation** — `/tf` transforms are cached in a rolling window and interpolated to the exact LiDAR timestamp using Spherical Linear Interpolation, avoiding gimbal lock.
-- **Flat LiDAR pool** — point clouds are concatenated into a single `(P, 4)` array. Per-frame `offsets` and `counts` index into it, eliminating padding and supporting variable point counts natively.
-- **O(1) random access** — the HDF5 schema is designed so that any sample `i` can be retrieved in constant time by any number of DataLoader workers simultaneously (SWMR mode).
-- **Persisted sensor metadata** — camera intrinsics (K, D, R, P matrices), distortion model, and static extrinsic transforms are written as HDF5 file attributes at finalization.
-- **PyTorch-native** — `KittiHDF5Dataset` implements `__len__`/`__getitem__` with lazy file handles (safe for `num_workers > 0`). A custom `kitti_collate_fn` handles variable-length LiDAR tensors in batches.
+Reads an MCAP file, synchronizes LiDAR and camera frames by timestamp, interpolates coordinate transforms, and writes a compressed HDF5 dataset that any DataLoader can index in O(1).
+
+The pipeline: `MCAPSource → SensorDataSynchronizer → HDF5Writer`
+
+- LiDAR frames are used as the sync reference. Each frame is paired with the nearest camera frame within a configurable time threshold; unpaired frames are dropped.
+- `/tf` transforms are interpolated (linear translation, SLERP rotation) to the exact LiDAR timestamp.
+- All point clouds are concatenated into a single flat array. Per-frame `(offset, count)` pairs index into it — no padding, variable point counts supported natively.
+- HDF5 datasets are resizable. Camera dimensions and LiDAR pool size are inferred from the first message; `finalize()` trims to the actual sample count.
 
 ---
 
-## HDF5 Output Schema
+## 2. Installation
+
+Python 3.10+ required.
+
+```bash
+pip install -e .
+```
+
+Optional PyTorch extras (for `KittiHDF5Dataset`):
+
+```bash
+pip install torch
+```
+
+Dev tools (ruff + pytest):
+
+```bash
+pip install -e ".[dev]"
+```
+
+---
+
+## 3. CLI
+
+### 3.1. Inspect an MCAP file
+
+```bash
+mcap2hdf5 --inspect data/raw/kitti.mcap
+```
+
+Prints a topic table (topic, message type, message count) and shows which topics would be auto-detected as camera image, camera info, LiDAR, TF, and TF static.
+
+### 3.2. Generate a job config
+
+```bash
+mcap2hdf5 --config data/raw/kitti.mcap
+```
+
+Auto-detects sensor topics and writes a YAML job config (`<stem>_config.yaml`) that can be reviewed and edited before running the conversion.
+
+Example output (`kitti_config.yaml`):
+
+```yaml
+source:
+  mcap: data/raw/kitti.mcap
+output:
+  hdf5: data/processed/kitti.hdf5
+modalities:
+  camera:
+    image_topic: /sensor/camera/left/image_raw/compressed
+    info_topic: /sensor/camera/left/camera_info
+    sync:
+      enabled: true
+      algorithm: nearest
+      threshold_sec: 0.05
+  lidar:
+    topic: /sensor/lidar/front/points
+    sync:
+      enabled: true
+      reference: true
+  tf:
+    topic: /tf
+    static_topic: /tf_static
+    sync:
+      enabled: false
+pipeline:
+  max_chunk_gap: 0.15
+  hdf5_write_batch_size: 100
+  tf_cache_size: 100
+```
+
+---
+
+## 4. Running the Pipeline
+
+The `convert` command is not yet implemented in the CLI. Run the pipeline directly via the example script:
+
+```bash
+python3 examples/convert_kitti.py
+```
+
+Edit the topic constants at the top of the script to match your sensor configuration. Output is written to `data/processed/chunks.hdf5`.
+
+---
+
+## 5. HDF5 Output Schema
 
 ```
 chunks.hdf5
 │
 ├── samples/
-│   ├── timestamps            [N]        float64  — LiDAR-based reference timestamp (seconds)
-│   └── chunk_ids             [N]        int32    — Temporal chunk index
+│   ├── timestamps        [N]           float64  — LiDAR-based reference timestamp (s)
+│   └── chunk_ids         [N]           int32    — Temporal chunk index
 │
 ├── camera/
-│   └── images                [N, H, W, 3]  uint8   — LZF-compressed RGB frames
+│   └── images            [N, H, W, 3]  uint8    — LZF-compressed RGB frames
 │
 ├── lidar/
-│   ├── data                  [P, 4]     float32  — Flat point pool: (X, Y, Z, Intensity)
-│   ├── offsets               [N]        int64    — Start index of frame i in data
-│   └── counts                [N]        int32    — Number of points in frame i
+│   ├── data              [P, 4]        float32  — Flat point pool: (X, Y, Z, Intensity)
+│   ├── offsets           [N]           int64    — Start index of frame i in data
+│   └── counts            [N]           int32    — Number of points in frame i
 │
 ├── transforms/
 │   └── {frame_id}_to_{child_frame_id}
-│                             [N, 4, 4]  float32  — SLERP-interpolated homogeneous matrices
+│                         [N, 4, 4]     float32  — SLERP-interpolated homogeneous matrices
 │
-└── static_transforms/
-    └── {frame_id}_to_{child_frame_id}
-                              [4, 4]     float32  — Rigid extrinsic transforms
+├── static_transforms/
+│   └── {frame_id}_to_{child_frame_id}
+│                         [4, 4]        float32  — Rigid extrinsic transforms
 │
 └── [File Attributes]
-    ├── camera_k              [3, 3]     float32  — Camera intrinsic matrix
-    ├── camera_d              [D]        float32  — Distortion coefficients
-    ├── camera_r              [3, 3]     float32  — Rectification matrix
-    ├── camera_p              [3, 4]     float32  — Projection matrix
-    ├── distortion_model               string
-    ├── camera_width / camera_height   int
-    ├── num_samples                    int
-    └── lidar_point_offset             int
+    ├── camera_k          [3, 3]        float32  — Intrinsic matrix
+    ├── camera_d          [D]           float32  — Distortion coefficients
+    ├── camera_r          [3, 3]        float32  — Rectification matrix
+    ├── camera_p          [3, 4]        float32  — Projection matrix
+    ├── distortion_model                string
+    ├── camera_width / camera_height    int
+    ├── num_samples                     int
+    └── lidar_point_offset              int
 ```
 
-Retrieving sample `i` from the LiDAR pool:
+Retrieve frame `i` from the LiDAR pool:
+
 ```python
 offset = hdf5["lidar/offsets"][i]
 count  = hdf5["lidar/counts"][i]
@@ -77,49 +157,12 @@ points = hdf5["lidar/data"][offset : offset + count]  # shape: (count, 4)
 
 ---
 
-## Quick Start
+## 6. Configuration Reference
 
-**1. Install** (Python 3.10+ required)
-```bash
-pip install -e .
-```
-
-**2. Place your MCAP file**
-```
-data/raw/kitti.mcap
-```
-Topic names and file paths are configured in `mcap2hdf5/config.py`.
-
-**3. Run the pipeline**
-```bash
-python3 generate_dataset.py
-```
-Output is written to `data/processed/chunks.hdf5`. The pipeline logs progress per batch and prints a summary on completion:
-```
-Dataset Statistics:
-  Total samples: 1847
-  Total lidar points: 52,184,291
-  Average points per sample: 28,255.2
-```
-
-**4. Verify with the PyTorch DataLoader**
-```bash
-python3 dataset.py
-```
-```
-Batch loaded: Image shape torch.Size([8, 3, H, W]), LiDAR frames in batch: 8
-```
-
----
-
-## Configuration
-
-All pipeline parameters are centralized in `mcap2hdf5/config.py`:
+Parameters are in `mcap2hdf5/configs/`:
 
 | Parameter | Default | Description |
 |:---|:---|:---|
-| `MCAP_FILE_PATH` | `data/raw/kitti.mcap` | Input MCAP file |
-| `CHUNKS_FILE_PATH` | `data/processed/chunks.hdf5` | Output HDF5 file |
 | `SENSOR_SYNC_THRESHOLD` | `0.05 s` | Max LiDAR↔Camera time delta for a valid pair |
 | `MAX_CHUNK_GAP` | `0.15 s` | Intra-sensor gap that triggers a chunk flush |
 | `TF_CACHE_SIZE` | `100` | Rolling window size for TF interpolation |
@@ -127,22 +170,51 @@ All pipeline parameters are centralized in `mcap2hdf5/config.py`:
 | `INITIAL_LIDAR_CAPACITY` | `1,000,000 pts` | Pre-allocated LiDAR pool (doubles on overflow) |
 | `DATA_COMPRESSION_METHOD` | `lzf` | HDF5 compression filter |
 
-ROS2 topic names (`LIDAR_TOPIC`, `CAMERA_IMAGE_TOPIC`, etc.) are also defined there — update them to match your sensor configuration.
+---
+
+## 7. PyTorch DataLoader
+
+```python
+from examples.load_kitti import KittiHDF5Dataset, kitti_collate_fn
+from torch.utils.data import DataLoader
+
+dataset = KittiHDF5Dataset("data/processed/chunks.hdf5")
+loader  = DataLoader(dataset, batch_size=8, num_workers=4, collate_fn=kitti_collate_fn)
+
+for batch in loader:
+    images = batch["image"]   # (8, 3, H, W)
+    lidars = batch["lidar"]   # list of 8 tensors, shapes (count_i, 4)
+```
+
+`KittiHDF5Dataset` uses lazy file handle initialization and SWMR mode, making it safe for `num_workers > 0`. `kitti_collate_fn` keeps LiDAR tensors as a list (not stacked) because point counts vary per frame.
 
 ---
 
-## How It Works
+## 8. Development
 
-### Temporal Synchronization
-Messages arrive interleaved from multiple topics. The synchronizer maintains a separate buffer per sensor and uses **LiDAR timestamp as the reference**: for each LiDAR frame, the camera frame with the smallest absolute time difference is selected. If the difference exceeds `SENSOR_SYNC_THRESHOLD`, the LiDAR frame is dropped.
+```bash
+# Lint
+ruff check .
 
-### Chunk Segmentation
-A flush is triggered when consecutive messages on the same topic are more than `MAX_CHUNK_GAP` apart. This segments the recording into temporal chunks (e.g., separate drives or episodes), preventing the synchronizer from pairing frames across a temporal gap.
+# Auto-fix
+ruff check --fix .
 
-### Transform Interpolation
-`/tf` messages are cached in a per-key rolling list. For each synchronized sample, transforms are interpolated to the LiDAR timestamp: **linear** for translation, **SLERP** (quaternion) for rotation — avoiding the artifacts of naive matrix interpolation.
-
-### LiDAR Storage
-Variable point counts per frame are handled without padding: all points are concatenated into a single flat array, and per-frame `(offset, count)` pairs act as an index. This keeps storage dense and retrieval O(1).
+# Tests
+pytest
+```
 
 ---
+
+## 9. Roadmap
+
+| Version | Scope |
+|:---|:---|
+| **0.1.0** | Single LiDAR + single camera. CLI `inspect` + `config` commands. `convert` command. Auto-detect topics. Validate on KITTI. |
+| **0.2.0** | Multiple cameras (N cameras, 1 LiDAR). Schema already forward-compatible. |
+| **1.0.0+** | Additional modalities: IMU, Radar, GPS, Odometry. |
+
+---
+
+## 10. License
+
+MIT
