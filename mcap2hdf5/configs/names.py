@@ -1,0 +1,8 @@
+CAMERA = "camera"
+CHUNK_ID = "chunkId"
+LIDAR = "lidar"
+ROS_MSG = "rosMsg"
+TF = "tf"
+TF_MATRIX = "tfMatrix"
+TIMESTAMP = "timestamp"
+TRANSFORMS = "transforms"
