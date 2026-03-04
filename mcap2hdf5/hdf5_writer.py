@@ -3,8 +3,7 @@ import logging
 import h5py
 import numpy as np
 
-from mcap2hdf5.config import (
-    CAMERA,
+from mcap2hdf5.configs.hdf5 import (
     CAMERA_D_MATRIX_ATTRIBUTE,
     CAMERA_GROUP,
     CAMERA_HEIGHT_ATTRIBUTE,
@@ -13,24 +12,27 @@ from mcap2hdf5.config import (
     CAMERA_P_MATRIX_ATTRIBUTE,
     CAMERA_R_MATRIX_ATTRIBUTE,
     CAMERA_WIDTH_ATTRIBUTE,
-    CHUNK_ID,
     CHUNK_IDS_DATASET_PATH,
     DATA_COMPRESSION_METHOD,
     DISTORTION_MODEL_ATTRIBUTE,
     INITIAL_LIDAR_CAPACITY,
-    LIDAR,
     LIDAR_COUNTS_DATASET_PATH,
     LIDAR_DATA_DATASET_PATH,
     LIDAR_GROUP,
     LIDAR_OFFSETS_DATASET_PATH,
     LIDAR_POINT_OFFSET_ATTRIBUTE,
     NUM_SAMPLES_ATTRIBUTE,
-    ROS_MSG,
     SAMPLES_GROUP,
-    TIMESTAMP,
     TIMESTAMP_DATASET_PATH,
-    TRANSFORMS,
     TRANSFORMS_GROUP,
+)
+from mcap2hdf5.configs.names import (
+    CAMERA,
+    CHUNK_ID,
+    LIDAR,
+    ROS_MSG,
+    TIMESTAMP,
+    TRANSFORMS,
 )
 from mcap2hdf5.message_converter import MessageConverter
 
