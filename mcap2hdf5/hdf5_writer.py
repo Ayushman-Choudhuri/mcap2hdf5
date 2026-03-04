@@ -34,7 +34,7 @@ from mcap2hdf5.configs.names import (
     TIMESTAMP,
     TRANSFORMS,
 )
-from mcap2hdf5.message_converter import MessageConverter
+from mcap2hdf5.utils.message_converter import MessageConverter
 
 
 class HDF5Writer:

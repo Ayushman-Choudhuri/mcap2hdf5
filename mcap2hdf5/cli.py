@@ -3,14 +3,14 @@ from typing import Optional
 
 import typer
 
-from mcap2hdf5.cli_utils import (
+from mcap2hdf5.utils.cli_utils import (
     console,
     detectSensors,
     inspectMcap,
     printAutoDetection,
     printTopicTable,
 )
-from mcap2hdf5.job_config import JobConfig
+from mcap2hdf5.utils.job_config import JobConfig
 
 app = typer.Typer(
     name="mcap2hdf5",

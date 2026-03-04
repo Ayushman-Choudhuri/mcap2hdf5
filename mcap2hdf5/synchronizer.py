@@ -11,8 +11,8 @@ from mcap2hdf5.configs import (
     TIMESTAMP,
     TRANSFORMS,
 )
-from mcap2hdf5.dataclasses import StreamMessage
-from mcap2hdf5.message_converter import MessageConverter
+from mcap2hdf5.utils.dataclasses import StreamMessage
+from mcap2hdf5.utils.message_converter import MessageConverter
 
 
 class SensorDataSynchronizer:

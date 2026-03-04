@@ -3,7 +3,7 @@ from typing import Optional
 
 from mcap_ros2.reader import read_ros2_messages
 
-from mcap2hdf5.dataclasses import StreamMessage
+from mcap2hdf5.utils.dataclasses import StreamMessage
 
 
 class MCAPSource:

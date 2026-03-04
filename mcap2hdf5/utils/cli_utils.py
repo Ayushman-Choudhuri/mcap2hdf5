@@ -1,4 +1,5 @@
 from pathlib import Path
+from typing import NamedTuple, Optional
 
 import typer
 from mcap.reader import make_reader
@@ -11,7 +12,14 @@ from mcap2hdf5.configs.messages import (
     POINTCLOUD2_MESSAGE_TYPES,
     TF_MESSAGE_TYPES,
 )
-from mcap2hdf5.dataclasses import DetectedSensors
+
+
+class DetectedSensors(NamedTuple):
+    cameraImage: Optional[str]
+    cameraInfo: Optional[str]
+    lidar: Optional[str]
+    tf: Optional[str]
+    tfStatic: Optional[str]
 
 console = Console()
 
