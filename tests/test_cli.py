@@ -278,7 +278,7 @@ class TestCliConfig:
 class TestCliNoArgs:
     def testNoArgsShowsHelp(self):
         result = runner.invoke(app, [])
-        assert result.exit_code == 0
+        assert result.exit_code in (0, 2)  # no_args_is_help exit code varies by typer version
         assert "mcap2hdf5" in result.output.lower() or "Usage" in result.output
 
 
