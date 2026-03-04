@@ -1,25 +1,38 @@
 import logging
 
-from mcap2hdf5.config import (
-    CHUNK_ID,
-    CHUNKS_FILE_PATH,
-    HDF5_WRITE_BATCH_SIZE,
+from mcap2hdf5.configs.hdf5 import HDF5_WRITE_BATCH_SIZE
+from mcap2hdf5.configs.pipeline import (
     MAX_CHUNK_GAP,
-    MCAP_FILE_PATH,
     SENSOR_SYNC_THRESHOLD,
 )
-from mcap2hdf5.hdf5_writer import HDF5Writer
+from mcap2hdf5.hdf5_writer import CHUNK_ID, HDF5Writer
 from mcap2hdf5.reader import MCAPSource
 from mcap2hdf5.synchronizer import SensorDataSynchronizer
+
+CAMERA_IMAGE_TOPIC = "/sensor/camera/left/image_raw/compressed"
+CAMERA_INFO_TOPIC = "/sensor/camera/left/camera_info"
+LIDAR_TOPIC = "/sensor/lidar/front/points"
+TF_TOPIC = "/tf"
+TF_STATIC_TOPIC = "/tf_static"
 
 
 def main():
     logging.basicConfig(level=logging.INFO)
     logger = logging.getLogger("Pipeline")
 
-    source = MCAPSource(MCAP_FILE_PATH)
-    synchronizer = SensorDataSynchronizer(SENSOR_SYNC_THRESHOLD, MAX_CHUNK_GAP)
-    writer = HDF5Writer(CHUNKS_FILE_PATH)
+    source = MCAPSource(
+        "data/raw/kitti.mcap",
+        cameraInfoTopic=CAMERA_INFO_TOPIC,
+        tfStaticTopic=TF_STATIC_TOPIC,
+    )
+    synchronizer = SensorDataSynchronizer(
+        SENSOR_SYNC_THRESHOLD,
+        MAX_CHUNK_GAP,
+        cameraImageTopic=CAMERA_IMAGE_TOPIC,
+        lidarTopic=LIDAR_TOPIC,
+        tfTopic=TF_TOPIC,
+    )
+    writer = HDF5Writer("data/processed/chunks.hdf5")
 
     logger.info("Starting conversion pipeline...")
     
