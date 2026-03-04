@@ -1,8 +1,3 @@
-from mcap2hdf5.configs.names import (
-    CAMERA,
-    LIDAR,
-    TF,
-)
 
 CAMERA_IMAGE_MESSAGE_TYPES = {
     "sensor_msgs/msg/CompressedImage",
