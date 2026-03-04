@@ -2,15 +2,12 @@ import logging
 
 import numpy as np
 
-from mcap2hdf5.config import (
+from mcap2hdf5.configs import (
     CAMERA,
-    CAMERA_IMAGE_TOPIC,
     LIDAR,
-    LIDAR_TOPIC,
     ROS_MSG,
     TF_CACHE_SIZE,
     TF_MATRIX,
-    TF_TOPIC,
     TIMESTAMP,
     TRANSFORMS,
 )
@@ -19,19 +16,22 @@ from mcap2hdf5.message_converter import MessageConverter
 
 
 class SensorDataSynchronizer:
-    def __init__(self, syncThreshold, maxGap):
+    def __init__(self, syncThreshold, maxGap, cameraImageTopic: str, lidarTopic: str, tfTopic: str):
         self.syncThreshold = syncThreshold
         self.maxGap = maxGap
+        self.cameraImageTopic = cameraImageTopic
+        self.lidarTopic = lidarTopic
+        self.tfTopic = tfTopic
         self.logger = logging.getLogger(__name__)
 
         self.chunkBuffer = {
-            LIDAR_TOPIC: [],
-            CAMERA_IMAGE_TOPIC: [],
+            self.lidarTopic: [],
+            self.cameraImageTopic: [],
         }
 
         self.lastTimestamps = {
-            LIDAR_TOPIC: None,
-            CAMERA_IMAGE_TOPIC: None
+            self.lidarTopic: None,
+            self.cameraImageTopic: None,
         }
 
         self.tfCache = {}
@@ -42,11 +42,11 @@ class SensorDataSynchronizer:
             ROS_MSG: streamMessage.msg,
         }
 
-        if streamMessage.topic == TF_TOPIC:
+        if streamMessage.topic == self.tfTopic:
             self.updateTFCache(chunkEntry)
             return
 
-        if streamMessage.topic in [LIDAR_TOPIC, CAMERA_IMAGE_TOPIC]:
+        if streamMessage.topic in [self.lidarTopic, self.cameraImageTopic]:
             if self.checkFlushConstraint(streamMessage.topic, streamMessage.timestamp):
                 yield from self.flushSamples()
 
@@ -80,8 +80,8 @@ class SensorDataSynchronizer:
         return (currentTimestamp - lastTimestamp) > self.maxGap
 
     def flushSamples(self):
-        lidarFrames = self.chunkBuffer[LIDAR_TOPIC]
-        cameraFrames = self.chunkBuffer[CAMERA_IMAGE_TOPIC]
+        lidarFrames = self.chunkBuffer[self.lidarTopic]
+        cameraFrames = self.chunkBuffer[self.cameraImageTopic]
         samples = []
 
         for lidarEntry in lidarFrames:
@@ -108,8 +108,8 @@ class SensorDataSynchronizer:
             samples.append(sample)
 
         self.chunkBuffer = {
-            LIDAR_TOPIC: [],
-            CAMERA_IMAGE_TOPIC: [],
+            self.lidarTopic: [],
+            self.cameraImageTopic: [],
         }
         self.lastTimestamps = {key: None for key in self.lastTimestamps}
 
