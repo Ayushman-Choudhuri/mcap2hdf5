@@ -34,45 +34,55 @@ Python 3.10+ required.
 pip install -e .
 ```
 
-Optional PyTorch extras (for `KittiHDF5Dataset`):
+This installs the package in editable mode - changes to source files take effect immediately without reinstalling. Only the core runtime dependencies are installed.
 
-```bash
-pip install torch
-```
-
-Dev tools (ruff + pytest):
+To also install dev tools (ruff + pytest):
 
 ```bash
 pip install -e ".[dev]"
 ```
 
+The `[dev]` suffix pulls in the optional dependency group defined in `pyproject.toml`. Use this if you intend to run tests or lint the code.
+
 ---
 
-## 3. CLI
+## 3. Supported Message Types
 
-### 3.1. Inspect an MCAP file
+| Modality | ROS2 Message Types |
+|:---|:---|
+| Camera image | `sensor_msgs/msg/CompressedImage`, `sensor_msgs/msg/Image` |
+| Camera info | `sensor_msgs/msg/CameraInfo` |
+| LiDAR | `sensor_msgs/msg/PointCloud2` |
+| Transforms | `tf2_msgs/msg/TFMessage` |
+
+---
+
+## 4. CLI
+
+### 4.1. Inspect an MCAP file
 
 ```bash
-mcap2hdf5 --inspect data/raw/kitti.mcap
+mcap2hdf5 --inspect data.mcap
 ```
 
 Prints a topic table (topic, message type, message count) and shows which topics would be auto-detected as camera image, camera info, LiDAR, TF, and TF static.
 
-### 3.2. Generate a job config
+
+### 4.2. Generate a conversion job config
 
 ```bash
-mcap2hdf5 --config data/raw/kitti.mcap
+mcap2hdf5 --config data.mcap
 ```
 
 Auto-detects sensor topics and writes a YAML job config (`<stem>_config.yaml`) that can be reviewed and edited before running the conversion.
 
-Example output (`kitti_config.yaml`):
+Example output (`data_config.yaml`):
 
 ```yaml
 source:
-  mcap: data/raw/kitti.mcap
+  mcap: data.mcap
 output:
-  hdf5: data/processed/kitti.hdf5
+  hdf5: data.hdf5
 modalities:
   camera:
     image_topic: /sensor/camera/left/image_raw/compressed
@@ -96,19 +106,19 @@ pipeline:
   hdf5_write_batch_size: 100
   tf_cache_size: 100
 ```
+### 4.3. Convert an MCAP file to HDF5 *(pending)*
 
----
+```bash
+mcap2hdf5 --convert data.mcap
+```
 
-## 4. Running the Pipeline
-
-The `convert` command is not yet implemented in the CLI. Run the pipeline directly via the example script:
+Not yet implemented in the CLI. In the meantime, run the pipeline directly via the example script:
 
 ```bash
 python3 examples/convert_kitti.py
 ```
 
 Edit the topic constants at the top of the script to match your sensor configuration. Output is written to `data/processed/chunks.hdf5`.
-
 ---
 
 ## 5. HDF5 Output Schema
@@ -172,25 +182,7 @@ Parameters are in `mcap2hdf5/configs/`:
 
 ---
 
-## 7. PyTorch DataLoader
-
-```python
-from examples.load_kitti import KittiHDF5Dataset, kitti_collate_fn
-from torch.utils.data import DataLoader
-
-dataset = KittiHDF5Dataset("data/processed/chunks.hdf5")
-loader  = DataLoader(dataset, batch_size=8, num_workers=4, collate_fn=kitti_collate_fn)
-
-for batch in loader:
-    images = batch["image"]   # (8, 3, H, W)
-    lidars = batch["lidar"]   # list of 8 tensors, shapes (count_i, 4)
-```
-
-`KittiHDF5Dataset` uses lazy file handle initialization and SWMR mode, making it safe for `num_workers > 0`. `kitti_collate_fn` keeps LiDAR tensors as a list (not stacked) because point counts vary per frame.
-
----
-
-## 8. Development
+## 7. Lint and Unit Testing
 
 ```bash
 # Lint
@@ -205,16 +197,16 @@ pytest
 
 ---
 
-## 9. Roadmap
+## 8. Roadmap
 
 | Version | Scope |
 |:---|:---|
-| **0.1.0** | Single LiDAR + single camera. CLI `inspect` + `config` commands. `convert` command. Auto-detect topics. Validate on KITTI. |
+| **0.1.0** | Single LiDAR + single camera. CLI `inspect` + `config` commands. Auto-detect topics. Validate on KITTI. |
 | **0.2.0** | Multiple cameras (N cameras, 1 LiDAR). Schema already forward-compatible. |
 | **1.0.0+** | Additional modalities: IMU, Radar, GPS, Odometry. |
 
 ---
 
-## 10. License
+## 9. License
 
 MIT
