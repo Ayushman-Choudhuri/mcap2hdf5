@@ -1,27 +1,3 @@
-MCAP_FILE_PATH = "data/raw/kitti.mcap"
-CHUNKS_FILE_PATH = "data/processed/chunks.hdf5"
-
-
-MAX_CHUNK_GAP = 0.15
-SENSOR_SYNC_THRESHOLD = 0.05
-TF_CACHE_SIZE = 100
-HDF5_WRITE_BATCH_SIZE = 100
-
-CAMERA_INTRINSIC_PARAMETERS_TOPIC = "/sensor/camera/left/camera_info"
-LIDAR_TOPIC = "/sensor/lidar/front/points"
-CAMERA_IMAGE_TOPIC = "/sensor/camera/left/image_raw/compressed"
-TF_TOPIC = "/tf"
-TF_STATIC_TOPIC = "/tf_static"
-
-
-TIMESTAMP = "timestamp"
-ROS_MSG = "rosMsg"
-TF_MATRIX = "tfMatrix"
-LIDAR = "lidar"
-CAMERA = "camera"
-TRANSFORMS = "transforms"
-CHUNK_ID = "chunkId"
-
 SAMPLES_GROUP = "samples"
 LIDAR_GROUP = "lidar"
 CAMERA_GROUP = "camera"
@@ -47,3 +23,5 @@ CAMERA_P_MATRIX_ATTRIBUTE = "camera_p"
 DISTORTION_MODEL_ATTRIBUTE = "distortion_model"
 CAMERA_WIDTH_ATTRIBUTE = "camera_width"
 CAMERA_HEIGHT_ATTRIBUTE = "camera_height"
+
+HDF5_WRITE_BATCH_SIZE = 100

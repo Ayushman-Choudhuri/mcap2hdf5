@@ -5,9 +5,8 @@ import h5py
 import torch
 from torch.utils.data import DataLoader, Dataset
 
-from mcap2hdf5.config import (
+from mcap2hdf5.configs.hdf5 import (
     CAMERA_IMAGES_DATASET_PATH,
-    CHUNKS_FILE_PATH,
     LIDAR_COUNTS_DATASET_PATH,
     LIDAR_DATA_DATASET_PATH,
     LIDAR_OFFSETS_DATASET_PATH,
@@ -81,7 +80,7 @@ def kitti_collate_fn(batch: List[Dict]) -> Dict[str, Any]:
 
 
 if __name__ == "__main__":
-    dataset = KittiHDF5Dataset(CHUNKS_FILE_PATH)
+    dataset = KittiHDF5Dataset("data/processed/chunks.hdf5")
     
     loader = DataLoader(
         dataset, 

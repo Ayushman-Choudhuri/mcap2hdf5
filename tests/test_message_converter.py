@@ -5,7 +5,7 @@ import numpy as np
 import pytest
 from scipy.spatial.transform import Rotation as R
 
-from mcap2hdf5.message_converter import MessageConverter
+from mcap2hdf5.utils.message_converter import MessageConverter
 
 
 def makePointField(name, offset, datatype):

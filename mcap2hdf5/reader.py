@@ -1,17 +1,21 @@
 import logging
+from typing import Optional
 
 from mcap_ros2.reader import read_ros2_messages
 
-from mcap2hdf5.config import (
-    CAMERA_INTRINSIC_PARAMETERS_TOPIC,
-    TF_STATIC_TOPIC,
-)
-from mcap2hdf5.dataclasses import StreamMessage
+from mcap2hdf5.utils.dataclasses import StreamMessage
 
 
 class MCAPSource:
-    def __init__(self,dataSourcePath):
+    def __init__(
+        self,
+        dataSourcePath,
+        cameraInfoTopic: Optional[str] = None,
+        tfStaticTopic: Optional[str] = None,
+    ):
         self.dataSourcePath = dataSourcePath
+        self.cameraInfoTopic = cameraInfoTopic
+        self.tfStaticTopic = tfStaticTopic
         self.cameraMetadata = None
         self.staticTransforms = None
         self.logger = logging.getLogger(__name__)
@@ -28,11 +32,19 @@ class MCAPSource:
                         msg.log_time.timestamp()
                     )
 
-                    if topic == CAMERA_INTRINSIC_PARAMETERS_TOPIC and self.cameraMetadata is None:
-                        self.cameraMetadata= rosMsg
+                    if (
+                        self.cameraInfoTopic
+                        and topic == self.cameraInfoTopic
+                        and self.cameraMetadata is None
+                    ):
+                        self.cameraMetadata = rosMsg
                         self.logger.info(f"Captured camera metadata from {topic}")
 
-                    if topic == TF_STATIC_TOPIC and self.staticTransforms is None:
+                    if (
+                        self.tfStaticTopic
+                        and topic == self.tfStaticTopic
+                        and self.staticTransforms is None
+                    ):
                         self.staticTransforms = rosMsg
                         self.logger.info(f"Captured static transforms from {topic}")
 
