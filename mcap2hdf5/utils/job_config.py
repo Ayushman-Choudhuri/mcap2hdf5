@@ -2,7 +2,6 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Optional
 
 import yaml
 
@@ -33,8 +32,8 @@ class SyncConfig:
 
 @dataclass
 class CameraConfig:
-    imageTopic: Optional[str]
-    infoTopic: Optional[str]
+    imageTopic: str | None
+    infoTopic: str | None
     sync: SyncConfig = field(default_factory=lambda: SyncConfig(enabled=True))
 
     def to_dict(self) -> dict:
@@ -47,10 +46,8 @@ class CameraConfig:
 
 @dataclass
 class LidarConfig:
-    topic: Optional[str]
-    sync: SyncConfig = field(
-        default_factory=lambda: SyncConfig(enabled=True, reference=True)
-    )
+    topic: str | None
+    sync: SyncConfig = field(default_factory=lambda: SyncConfig(enabled=True, reference=True))
 
     def to_dict(self) -> dict:
         return {
@@ -61,8 +58,8 @@ class LidarConfig:
 
 @dataclass
 class TFConfig:
-    topic: Optional[str] = None
-    staticTopic: Optional[str] = None
+    topic: str | None = None
+    staticTopic: str | None = None
     sync: SyncConfig = field(default_factory=lambda: SyncConfig(enabled=False))
 
     def to_dict(self) -> dict:
@@ -114,11 +111,11 @@ class JobConfig:
     def from_detection(
         cls,
         mcapPath: Path,
-        cameraImage: Optional[str],
-        cameraInfo: Optional[str],
-        lidar: Optional[str],
-        tf: Optional[str] = None,
-        tfStatic: Optional[str] = None,
+        cameraImage: str | None,
+        cameraInfo: str | None,
+        lidar: str | None,
+        tf: str | None = None,
+        tfStatic: str | None = None,
     ) -> JobConfig:
         """Build a JobConfig from MCAP auto-detection results."""
         outputHdf5 = f"data/processed/{mcapPath.stem}.hdf5"

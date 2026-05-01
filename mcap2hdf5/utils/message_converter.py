@@ -16,6 +16,7 @@ POINTFIELD_DATATYPE_MAP = {
     8: np.float64,
 }
 
+
 class MessageConverter:
     @staticmethod
     def lidarToNumpy(lidarMsg, fieldNames=DEFAULT_LIDAR_MESSAGE_FIELDS):
@@ -33,7 +34,7 @@ class MessageConverter:
             field = fieldMap[fieldName]
             fieldDtype = np.dtype(POINTFIELD_DATATYPE_MAP[field.datatype])
             fieldEndByte = field.offset + fieldDtype.itemsize
-            fieldBytes = pointByteBuffer[:, field.offset:fieldEndByte].tobytes()
+            fieldBytes = pointByteBuffer[:, field.offset : fieldEndByte].tobytes()
             pointCloud[:, index] = np.frombuffer(fieldBytes, dtype=fieldDtype)
 
         return pointCloud
@@ -54,12 +55,18 @@ class MessageConverter:
             translation.y,
             translation.z,
         ]
-        matrix[0:3, 0:3] = R.from_quat([
-            float(rotation.x),
-            float(rotation.y),
-            float(rotation.z),
-            float(rotation.w),
-        ]).as_matrix().astype(np.float32)
+        matrix[0:3, 0:3] = (
+            R.from_quat(
+                [
+                    float(rotation.x),
+                    float(rotation.y),
+                    float(rotation.z),
+                    float(rotation.w),
+                ]
+            )
+            .as_matrix()
+            .astype(np.float32)
+        )
         return matrix
 
     @staticmethod
@@ -68,10 +75,12 @@ class MessageConverter:
 
         interpolatedMatrix[0:3, 3] = (1.0 - alpha) * startMatrix[0:3, 3] + alpha * endMatrix[0:3, 3]
 
-        rotations = R.concatenate([
-            R.from_matrix(startMatrix[0:3, 0:3]),
-            R.from_matrix(endMatrix[0:3, 0:3]),
-        ])
+        rotations = R.concatenate(
+            [
+                R.from_matrix(startMatrix[0:3, 0:3]),
+                R.from_matrix(endMatrix[0:3, 0:3]),
+            ]
+        )
         interpolatedMatrix[0:3, 0:3] = (
             Slerp([0, 1], rotations)(alpha).as_matrix().astype(np.float32)
         )

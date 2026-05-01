@@ -1,5 +1,4 @@
 import logging
-from typing import Optional
 
 from mcap_ros2.reader import read_ros2_messages
 
@@ -10,8 +9,8 @@ class MCAPSource:
     def __init__(
         self,
         dataSourcePath,
-        cameraInfoTopic: Optional[str] = None,
-        tfStaticTopic: Optional[str] = None,
+        cameraInfoTopic: str | None = None,
+        tfStaticTopic: str | None = None,
     ):
         self.dataSourcePath = dataSourcePath
         self.cameraInfoTopic = cameraInfoTopic
@@ -27,10 +26,7 @@ class MCAPSource:
                     topic = msg.channel.topic
                     rosMsg = msg.ros_msg
 
-                    timestamp = self.extractTimestamp(
-                        rosMsg,
-                        msg.log_time.timestamp()
-                    )
+                    timestamp = self.extractTimestamp(rosMsg, msg.log_time.timestamp())
 
                     if (
                         self.cameraInfoTopic

@@ -64,14 +64,10 @@ class SensorDataSynchronizer:
                 self.tfCache[key] = []
 
             matrix = MessageConverter.transformToMatrix(tfStamped.transform)
-            self.tfCache[key].append({
-                TIMESTAMP: timestamp,
-                TF_MATRIX: matrix
-            })
+            self.tfCache[key].append({TIMESTAMP: timestamp, TF_MATRIX: matrix})
 
             if len(self.tfCache[key]) > TF_CACHE_SIZE:
                 self.tfCache[key].pop(0)
-
 
     def checkFlushConstraint(self, sensorTopicName, currentTimestamp):
         lastTimestamp = self.lastTimestamps.get(sensorTopicName)
@@ -111,7 +107,7 @@ class SensorDataSynchronizer:
             self.lidarTopic: [],
             self.cameraImageTopic: [],
         }
-        self.lastTimestamps = {key: None for key in self.lastTimestamps}
+        self.lastTimestamps = dict.fromkeys(self.lastTimestamps)
 
         for sample in samples:
             yield sample
@@ -121,7 +117,7 @@ class SensorDataSynchronizer:
             return None
 
         closestFrame = None
-        minDiff = float('inf')
+        minDiff = float("inf")
 
         for frame in frames:
             diff = abs(frame[TIMESTAMP] - targetTimestamp)

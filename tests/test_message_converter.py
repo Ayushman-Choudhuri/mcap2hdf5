@@ -20,6 +20,7 @@ def makePointCloud2(fields, point_step, points):
         data=b"".join(points),
     )
 
+
 def makeTransformMatrix(translation, euler_xyz_deg):
     """Build a float32 4x4 homogeneous matrix from a translation and XYZ Euler angles (degrees)."""
     matrix = np.eye(4, dtype=np.float32)
@@ -75,7 +76,7 @@ class TestLidarToNumpy:
             ("x", 0, 7),
             ("y", 4, 7),
             ("z", 8, 7),
-            ("ring", 12, 4),        # uint16, datatype=4
+            ("ring", 12, 4),  # uint16, datatype=4
             ("intensity", 16, 7),
         ]
         points = [
@@ -122,6 +123,7 @@ class TestLidarToNumpy:
 
         with pytest.raises(ValueError, match="PointCloud2 missing field: intensity"):
             MessageConverter.lidarToNumpy(msg)
+
 
 class TestInterpolateMatrix:
     def testAlphaZeroReturnsStartMatrix(self):

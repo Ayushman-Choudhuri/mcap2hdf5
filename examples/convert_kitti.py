@@ -35,12 +35,12 @@ def main():
     writer = HDF5Writer("data/processed/chunks.hdf5")
 
     logger.info("Starting conversion pipeline...")
-    
+
     sampleBatch = []
     chunkId = 0
     totalSamples = 0
 
-    try: 
+    try:
         for streamMessage in source.streamMessages():
             flushEventTriggered = False
 
@@ -54,14 +54,14 @@ def main():
                     totalSamples += len(sampleBatch)
                     logger.info(f"Written batch of {len(sampleBatch)} samples to HDF5.")
                     sampleBatch = []
-            
+
             if flushEventTriggered:
                 logger.info(
                     f"Flush event triggered for chunk {chunkId}"
                     f" at timestamp {streamMessage.timestamp}."
                 )
                 chunkId += 1
-        
+
         """ Handling of residual samples """
 
         for sample in synchronizer.flushSamples():
@@ -72,7 +72,7 @@ def main():
             writer.writeBatch(sampleBatch)
             totalSamples += len(sampleBatch)
             logger.info(f"Written residual batch of {len(sampleBatch)} samples to HDF5.")
-        
+
         writer.finalize(
             cameraMetadata=source.getCameraMetadata(),
             staticTransforms=source.getStaticTransforms(),
@@ -82,8 +82,9 @@ def main():
         logger.error(f"An error occurred during dataset generation: {e}")
 
     logger.info(
-        f"Dataset generation completed with {totalSamples} samples across {chunkId+1} chunks."
+        f"Dataset generation completed with {totalSamples} samples across {chunkId + 1} chunks."
     )
+
 
 if __name__ == "__main__":
     main()
