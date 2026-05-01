@@ -4,11 +4,17 @@ Python 3.10+ required. This project uses [uv](https://docs.astral.sh/uv/getting-
 
 ## Setup
 
+### Linux and macOS
+
 Install uv if you don't have it:
 
 ```bash
 curl -LsSf https://astral.sh/uv/install.sh | sh
 ```
+
+### Windows
+
+Native Windows is not supported due to system-level dependencies required by `opencv-python-headless`. Use [WSL2](https://learn.microsoft.com/en-us/windows/wsl/install) with Ubuntu 22.04, then follow the Linux instructions above.
 
 Clone the repo and sync dependencies:
 
