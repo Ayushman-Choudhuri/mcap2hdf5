@@ -9,10 +9,12 @@ class MCAPSource:
     def __init__(
         self,
         dataSourcePath,
+        topics: list[str] | None = None,
         cameraInfoTopic: str | None = None,
         tfStaticTopic: str | None = None,
     ):
         self.dataSourcePath = dataSourcePath
+        self.topics = topics
         self.cameraInfoTopic = cameraInfoTopic
         self.tfStaticTopic = tfStaticTopic
         self.cameraMetadata = None
@@ -22,7 +24,7 @@ class MCAPSource:
     def streamMessages(self):
         try:
             with open(self.dataSourcePath, "rb") as f:
-                for msg in read_ros2_messages(f):
+                for msg in read_ros2_messages(f, topics=self.topics):
                     topic = msg.channel.topic
                     rosMsg = msg.ros_msg
 
