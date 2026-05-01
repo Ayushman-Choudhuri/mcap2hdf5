@@ -31,18 +31,10 @@ The pipeline: `MCAPSource → SensorDataSynchronizer → HDF5Writer`
 Python 3.10+ required.
 
 ```bash
-pip install -e .
+pip install mcap2hdf5
 ```
 
-This installs the package in editable mode - changes to source files take effect immediately without reinstalling. Only the core runtime dependencies are installed.
-
-To also install dev tools (ruff + pytest):
-
-```bash
-pip install -e ".[dev]"
-```
-
-The `[dev]` suffix pulls in the optional dependency group defined in `pyproject.toml`. Use this if you intend to run tests or lint the code.
+To contribute, see [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ---
 
