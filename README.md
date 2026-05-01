@@ -54,16 +54,15 @@ To contribute, see [CONTRIBUTING.md](CONTRIBUTING.md).
 ### 4.1. Inspect an MCAP file
 
 ```bash
-mcap2hdf5 --inspect data.mcap
+mcap2hdf5 inspect data.mcap
 ```
 
 Prints a topic table (topic, message type, message count) and shows which topics would be auto-detected as camera image, camera info, LiDAR, TF, and TF static.
 
-
-### 4.2. Generate a conversion job config
+### 4.2. Generate a job config
 
 ```bash
-mcap2hdf5 --config data.mcap
+mcap2hdf5 init data.mcap
 ```
 
 Auto-detects sensor topics and writes a YAML job config (`<stem>_config.yaml`) that can be reviewed and edited before running the conversion.
@@ -98,10 +97,11 @@ pipeline:
   hdf5_write_batch_size: 100
   tf_cache_size: 100
 ```
+
 ### 4.3. Convert an MCAP file to HDF5 *(pending)*
 
 ```bash
-mcap2hdf5 --convert data.mcap
+mcap2hdf5 convert data_config.yaml
 ```
 
 Not yet implemented in the CLI. In the meantime, run the pipeline directly via the example script:
@@ -193,7 +193,7 @@ pytest
 
 | Version | Scope |
 |:---|:---|
-| **0.1.0** | Single LiDAR + single camera. CLI `inspect` + `config` commands. Auto-detect topics. Validate on KITTI. |
+| **0.1.0** | Single LiDAR + single camera. CLI `inspect`, `init`, `convert` commands. Auto-detect topics. Validate on KITTI. |
 | **0.2.0** | Multiple cameras (N cameras, 1 LiDAR). Schema already forward-compatible. |
 | **1.0.0+** | Additional modalities: IMU, Radar, GPS, Odometry. |
 
