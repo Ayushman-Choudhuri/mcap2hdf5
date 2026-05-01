@@ -12,6 +12,7 @@ from mcap2hdf5.utils.cli_utils import DetectedSensors, detectFirst, detectSensor
 
 runner = CliRunner()
 
+
 class TestDetectFirst:
     def testReturnsFirstMatchingTopic(self):
         topicToSchema = {"/camera/image": "sensor_msgs/msg/Image"}
@@ -83,6 +84,7 @@ class TestDetectTF:
         assert static == "/TF_STATIC"
         assert dynamic == "/tf"
 
+
 class TestDetectSensors:
     def testFullDetection(self):
         topicToSchema = {
@@ -122,6 +124,7 @@ class TestDetectSensors:
         assert lidar is None
         assert tf is None
         assert tfStatic is None
+
 
 def _makeChannelSummary(topics: dict[str, str]) -> MagicMock:
     """Build a minimal MCAP summary mock with the given {topic: schema_name} mapping."""
@@ -163,7 +166,7 @@ class TestCliInspect:
             mock_reader.get_summary.return_value = summary
             mock_reader_cls.return_value = mock_reader
 
-            result = runner.invoke(app, ["--inspect", str(mcap)])
+            result = runner.invoke(app, ["inspect", str(mcap)])
 
         assert result.exit_code == 0
 
@@ -177,12 +180,12 @@ class TestCliInspect:
             mock_reader.get_summary.return_value = summary
             mock_reader_cls.return_value = mock_reader
 
-            result = runner.invoke(app, ["--inspect", str(mcap)])
+            result = runner.invoke(app, ["inspect", str(mcap)])
 
         assert "/velodyne_points" in result.output
 
     def testInspectFileNotFound(self):
-        result = runner.invoke(app, ["--inspect", "/nonexistent/path/file.mcap"])
+        result = runner.invoke(app, ["inspect", "/nonexistent/path/file.mcap"])
         assert result.exit_code != 0
         assert "not found" in result.output.lower() or "error" in result.output.lower()
 
@@ -196,7 +199,7 @@ class TestCliInspect:
             mock_reader.get_summary.return_value = summary
             mock_reader_cls.return_value = mock_reader
 
-            result = runner.invoke(app, ["--inspect", str(mcap)])
+            result = runner.invoke(app, ["inspect", str(mcap)])
 
         assert "Auto-detection" in result.output
 
@@ -211,7 +214,7 @@ class TestCliInspect:
             mock_reader.get_summary.return_value = summary
             mock_reader_cls.return_value = mock_reader
 
-            result = runner.invoke(app, ["--inspect", str(mcap)])
+            result = runner.invoke(app, ["inspect", str(mcap)])
 
         assert "not found" in result.output
 
@@ -227,12 +230,12 @@ class TestCliConfig:
             mock_reader.get_summary.return_value = summary
             mock_reader_cls.return_value = mock_reader
 
-            result = runner.invoke(app, ["--config", str(mcap)], catch_exceptions=False)
+            result = runner.invoke(app, ["init", str(mcap)], catch_exceptions=False)
 
         assert result.exit_code == 0
         config_file = Path("test_config.yaml")
         assert config_file.exists()
-        config_file.unlink()  # clean up
+        config_file.unlink()
 
     def testConfigOutputMentionsYamlPath(self, tmp_path):
         mcap = tmp_path / "test.mcap"
@@ -244,13 +247,13 @@ class TestCliConfig:
             mock_reader.get_summary.return_value = summary
             mock_reader_cls.return_value = mock_reader
 
-            result = runner.invoke(app, ["--config", str(mcap)], catch_exceptions=False)
+            result = runner.invoke(app, ["init", str(mcap)], catch_exceptions=False)
 
         assert "_config.yaml" in result.output
-        Path("test_config.yaml").unlink(missing_ok=True)  # clean up
+        Path("test_config.yaml").unlink(missing_ok=True)
 
     def testConfigFileNotFound(self):
-        result = runner.invoke(app, ["--config", "/nonexistent/path/file.mcap"])
+        result = runner.invoke(app, ["init", "/nonexistent/path/file.mcap"])
         assert result.exit_code != 0
 
     def testConfigYamlContainsMcapPath(self, tmp_path):
@@ -265,7 +268,7 @@ class TestCliConfig:
             mock_reader.get_summary.return_value = summary
             mock_reader_cls.return_value = mock_reader
 
-            runner.invoke(app, ["--config", str(mcap)], catch_exceptions=False)
+            runner.invoke(app, ["init", str(mcap)], catch_exceptions=False)
 
         config_file = Path("myrecording_config.yaml")
         assert config_file.exists()
@@ -278,9 +281,8 @@ class TestCliConfig:
 class TestCliNoArgs:
     def testNoArgsShowsHelp(self):
         result = runner.invoke(app, [])
-        assert result.exit_code in (0, 2)  # no_args_is_help exit code varies by typer version
+        assert result.exit_code in (0, 2)
         assert "mcap2hdf5" in result.output.lower() or "Usage" in result.output
-
 
 
 class TestInspectMcap:
@@ -321,9 +323,12 @@ class TestInspectMcap:
         summary.schemas = {1: schema}
         summary.statistics = None
 
-        with patch("mcap2hdf5.utils.cli_utils.make_reader") as mock_reader_cls, \
-             patch("mcap2hdf5.utils.cli_utils.countMessagesByChannel", 
-                   return_value={1: 42}) as mock_count:
+        with (
+            patch("mcap2hdf5.utils.cli_utils.make_reader") as mock_reader_cls,
+            patch(
+                "mcap2hdf5.utils.cli_utils.countMessagesByChannel", return_value={1: 42}
+            ) as mock_count,
+        ):
             mock_reader = MagicMock()
             mock_reader.get_summary.return_value = summary
             mock_reader_cls.return_value = mock_reader

@@ -1,9 +1,10 @@
 from pathlib import Path
-from typing import NamedTuple, Optional
+from typing import NamedTuple
 
 import typer
 from mcap.reader import make_reader
 from rich.console import Console
+from rich.progress import BarColumn, MofNCompleteColumn, Progress, SpinnerColumn, TextColumn
 from rich.table import Table
 
 from mcap2hdf5.configs.messages import (
@@ -15,28 +16,30 @@ from mcap2hdf5.configs.messages import (
 
 
 class DetectedSensors(NamedTuple):
-    cameraImage: Optional[str]
-    cameraInfo: Optional[str]
-    lidar: Optional[str]
-    tf: Optional[str]
-    tfStatic: Optional[str]
+    cameraImage: str | None
+    cameraInfo: str | None
+    lidar: str | None
+    tf: str | None
+    tfStatic: str | None
+
 
 console = Console()
 
 
 def inspectMcap(mcapPath: Path) -> tuple[dict[str, str], dict[str, int]]:
     """Read MCAP summary metadata and return per-topic schema names and message counts."""
-    
+
     try:
         with open(mcapPath, "rb") as mcapFile:
             reader = make_reader(mcapFile)
-            summary = reader.get_summary()
+            with console.status("[dim]Reading MCAP summary...[/dim]"):
+                summary = reader.get_summary()
     except FileNotFoundError:
         console.print(f"[red]Error:[/red] File not found: {mcapPath}")
-        raise typer.Exit(code=1)
+        raise typer.Exit(code=1) from None
     except Exception as e:
         console.print(f"[red]Error:[/red] Failed to read MCAP file: {e}")
-        raise typer.Exit(code=1)
+        raise typer.Exit(code=1) from None
 
     if summary is None:
         console.print("[yellow]Warning:[/yellow] MCAP file contains no summary block.")
@@ -59,12 +62,29 @@ def inspectMcap(mcapPath: Path) -> tuple[dict[str, str], dict[str, int]]:
 
 def countMessagesByChannel(mcapPath: Path) -> dict[int, int]:
     """Scan every message in an MCAP file and count messages per channel ID."""
-    
+
     counts: dict[int, int] = {}
-    with open(mcapPath, "rb") as f:
-        reader = make_reader(f)
-        for _, channel, _ in reader.iter_messages():
-            counts[channel.id] = counts.get(channel.id, 0) + 1
+    fileSize = mcapPath.stat().st_size
+
+    with Progress(
+        SpinnerColumn(),
+        TextColumn("[progress.description]{task.description}"),
+        BarColumn(),
+        MofNCompleteColumn(),
+        console=console,
+        transient=True,
+    ) as progress:
+        task = progress.add_task("Scanning messages (no summary record found)...", total=fileSize)
+        n = 0
+        with open(mcapPath, "rb") as f:
+            reader = make_reader(f)
+            for _, channel, _ in reader.iter_messages():
+                counts[channel.id] = counts.get(channel.id, 0) + 1
+                n += 1
+                if n % 200 == 0:
+                    progress.update(task, completed=f.tell())
+        progress.update(task, completed=fileSize)
+
     return counts
 
 
@@ -74,7 +94,7 @@ def printTopicTable(
     topicCounts: dict[str, int],
 ) -> None:
     """Render a Rich table of topics, message types, and counts to the console."""
-    
+
     table = Table(title=f"[bold]{mcapPath.name}[/bold]", show_lines=True)
     table.add_column("Topic", style="cyan", no_wrap=True)
     table.add_column("Message Type", style="white")
@@ -88,7 +108,7 @@ def printTopicTable(
 
 def detectSensors(topicToSchema: dict[str, str]) -> DetectedSensors:
     """Heuristically assign topics to sensor modalities based on message type."""
-    
+
     tf, tfStatic = detectTF(topicToSchema)
     return DetectedSensors(
         cameraImage=detectFirst(topicToSchema, CAMERA_IMAGE_MESSAGE_TYPES, "camera image"),
@@ -105,7 +125,7 @@ def detectFirst(
     label: str,
 ) -> str | None:
     """Return the first topic whose schema is in ``targetTypes``, or ``None``."""
-    
+
     matches = [t for t, s in topicToSchema.items() if s in targetTypes]
     if not matches:
         return None
@@ -116,7 +136,7 @@ def detectFirst(
 
 def detectTF(topicToSchema: dict[str, str]) -> tuple[str | None, str | None]:
     """Detect dynamic TF and static TF topics by schema type and topic name."""
-    
+
     static: list[str] = []
     dynamic: list[str] = []
     for topic, schema in topicToSchema.items():
@@ -133,7 +153,7 @@ def detectTF(topicToSchema: dict[str, str]) -> tuple[str | None, str | None]:
 
 def printAutoDetection(detected: DetectedSensors) -> None:
     """Print the auto-detected sensor topic assignments to the console."""
-    
+
     cameraImage, cameraInfo, lidar, tf, tfStatic = detected
     console.print("\n[bold]Auto-detection:[/bold]")
     printDetection("Camera image", cameraImage)
@@ -145,7 +165,7 @@ def printAutoDetection(detected: DetectedSensors) -> None:
 
 def printDetection(label: str, topic: str | None) -> None:
     """Print a single sensor detection result, coloured green (found) or red (missing)."""
-    
+
     if topic:
         console.print(f"  {label}: [green]{topic}[/green]")
     else:
