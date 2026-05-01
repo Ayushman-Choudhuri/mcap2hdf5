@@ -138,6 +138,53 @@ class JobConfig:
             "pipeline": self.pipeline.to_dict(),
         }
 
+    @classmethod
+    def load(cls, path: Path) -> JobConfig:
+        """Deserialize a JobConfig from a YAML file produced by save()."""
+        with open(path) as f:
+            data = yaml.safe_load(f)
+
+        cam = data["modalities"]["camera"]
+        cam_sync = cam.get("sync", {})
+        lidar = data["modalities"]["lidar"]
+        lidar_sync = lidar.get("sync", {})
+        tf = data["modalities"]["tf"]
+        tf_sync = tf.get("sync", {})
+        pipeline = data.get("pipeline", {})
+
+        return cls(
+            sourceMcap=data["source"]["mcap"],
+            outputHdf5=data["output"]["hdf5"],
+            modalities=ModalitiesConfig(
+                camera=CameraConfig(
+                    imageTopic=cam.get("image_topic"),
+                    infoTopic=cam.get("info_topic"),
+                    sync=SyncConfig(
+                        enabled=cam_sync.get("enabled", True),
+                        algorithm=cam_sync.get("algorithm", "nearest"),
+                        thresholdSec=cam_sync.get("threshold_sec", SENSOR_SYNC_THRESHOLD),
+                    ),
+                ),
+                lidar=LidarConfig(
+                    topic=lidar.get("topic"),
+                    sync=SyncConfig(
+                        enabled=lidar_sync.get("enabled", True),
+                        reference=lidar_sync.get("reference", True),
+                    ),
+                ),
+                tf=TFConfig(
+                    topic=tf.get("topic"),
+                    staticTopic=tf.get("static_topic"),
+                    sync=SyncConfig(enabled=tf_sync.get("enabled", False)),
+                ),
+            ),
+            pipeline=PipelineConfig(
+                maxChunkGap=pipeline.get("max_chunk_gap", MAX_CHUNK_GAP),
+                hdf5WriteBatchSize=pipeline.get("hdf5_write_batch_size", HDF5_WRITE_BATCH_SIZE),
+                tfCacheSize=pipeline.get("tf_cache_size", TF_CACHE_SIZE),
+            ),
+        )
+
     def save(self, path: Path) -> None:
         """Serialize to YAML at the given path."""
         with open(path, "w") as f:
