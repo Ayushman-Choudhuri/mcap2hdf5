@@ -9,6 +9,7 @@ from typer.testing import CliRunner
 
 from mcap2hdf5.cli import app
 from mcap2hdf5.utils.cli_utils import DetectedSensors, detectFirst, detectSensors, detectTF
+from mcap2hdf5.utils.job_config import JobConfig
 
 runner = CliRunner()
 
@@ -356,9 +357,7 @@ class TestInspectMcap:
         assert topicCounts["/lidar"] == 10
 
 
-def _makeValidJobConfig(mcap_path: str = "test.mcap") -> "JobConfig":
-    from mcap2hdf5.utils.job_config import JobConfig
-
+def _makeValidJobConfig(mcap_path: str = "test.mcap") -> JobConfig:
     return JobConfig.from_detection(
         Path(mcap_path),
         cameraImage="/camera/image_raw",
