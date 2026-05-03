@@ -2,7 +2,6 @@ from pathlib import Path
 
 import typer
 from mcap.reader import make_reader
-from rich.console import Console
 from rich.progress import (
     BarColumn,
     MofNCompleteColumn,
@@ -19,8 +18,7 @@ from mcap2hdf5.configs.messages import (
     TF_MESSAGE_TYPES,
 )
 from mcap2hdf5.utils.detect import DetectedSensors, detectAll
-
-console = Console()
+from mcap2hdf5.utils.logger import logger
 
 
 def inspectMcap(mcapPath: Path) -> tuple[dict[str, str], dict[str, int]]:
@@ -29,24 +27,24 @@ def inspectMcap(mcapPath: Path) -> tuple[dict[str, str], dict[str, int]]:
     try:
         with open(mcapPath, "rb") as mcapFile:
             reader = make_reader(mcapFile)
-            with console.status("[dim]Reading MCAP summary...[/dim]"):
+            with logger.status("[dim]Reading MCAP summary...[/dim]"):
                 summary = reader.get_summary()
     except FileNotFoundError:
-        console.print(f"[red]Error:[/red] File not found: {mcapPath}")
+        logger.error(f"File not found: {mcapPath}")
         raise typer.Exit(code=1) from None
     except Exception as e:
-        console.print(f"[red]Error:[/red] Failed to read MCAP file: {e}")
+        logger.error(f"Failed to read MCAP file: {e}")
         raise typer.Exit(code=1) from None
 
     if summary is None:
-        console.print("[yellow]Warning:[/yellow] MCAP file contains no summary block.")
+        logger.warning("MCAP file contains no summary block.")
         raise typer.Exit(code=1)
 
     if summary.statistics and summary.statistics.channel_message_counts:
-        console.print("[dim]Using message counts from MCAP statistics record.[/dim]")
+        logger.info("Using message counts from MCAP statistics record.")
         channelCounts = summary.statistics.channel_message_counts
     else:
-        console.print("[dim]No statistics record found — scanning file for message counts.[/dim]")
+        logger.info("No statistics record found — scanning file for message counts.")
         channelCounts = countMessagesByChannel(mcapPath)
 
     topicToSchema: dict[str, str] = {}
@@ -55,9 +53,6 @@ def inspectMcap(mcapPath: Path) -> tuple[dict[str, str], dict[str, int]]:
         schema = summary.schemas.get(channel.schema_id)
         topicToSchema[channel.topic] = schema.name if schema else "unknown"
         topicCounts[channel.topic] = channelCounts.get(channelId, 0)
-
-    print(topicToSchema)
-    print(topicCounts)
 
     return topicToSchema, topicCounts
 
@@ -73,7 +68,7 @@ def countMessagesByChannel(mcapPath: Path) -> dict[int, int]:
         TextColumn("[progress.description]{task.description}"),
         BarColumn(),
         MofNCompleteColumn(),
-        console=console,
+        console=logger.console,
         transient=True,
     ) as progress:
         task = progress.add_task("Scanning messages (no summary record found)...", total=fileSize)
@@ -103,7 +98,7 @@ def printTopicTable(
     for topic, schema in topicToSchema.items():
         table.add_row(topic, schema, str(topicCounts.get(topic, 0)))
 
-    console.print(table)
+    logger.console.print(table)
 
 
 def printAutoDetection(topicToSchema: dict[str, str], detected: DetectedSensors) -> None:
@@ -118,9 +113,7 @@ def printAutoDetection(topicToSchema: dict[str, str], detected: DetectedSensors)
     ):
         matches = detectAll(topicToSchema, types)
         if len(matches) > 1:
-            console.print(
-                f"  [yellow]Note:[/yellow] Multiple {label} topics — using first: {matches}"
-            )
+            logger.warning(f"Multiple {label} topics — using first: {matches}")
 
     dynamic_all = [
         t for t, s in topicToSchema.items()
@@ -131,15 +124,11 @@ def printAutoDetection(topicToSchema: dict[str, str], detected: DetectedSensors)
         if s in TF_MESSAGE_TYPES and "static" in t.lower()
     ]
     if len(dynamic_all) > 1:
-        console.print(
-            f"  [yellow]Note:[/yellow] Multiple TF topics — using first: {dynamic_all}"
-        )
+        logger.warning(f"Multiple TF topics — using first: {dynamic_all}")
     if len(static_all) > 1:
-        console.print(
-            f"  [yellow]Note:[/yellow] Multiple TF static topics — using first: {static_all}"
-        )
+        logger.warning(f"Multiple TF static topics — using first: {static_all}")
 
-    console.print("\n[bold]Auto-detection:[/bold]")
+    logger.console.print("\n[bold]Auto-detection:[/bold]")
     _printDetection("Camera image", cameraImage)
     _printDetection("Camera info ", cameraInfo)
     _printDetection("LiDAR       ", lidar)
@@ -149,6 +138,6 @@ def printAutoDetection(topicToSchema: dict[str, str], detected: DetectedSensors)
 
 def _printDetection(label: str, topic: str | None) -> None:
     if topic:
-        console.print(f"  {label}: [green]{topic}[/green]")
+        logger.console.print(f"  {label}: [green]{topic}[/green]")
     else:
-        console.print(f"  {label}: [red]not found[/red]")
+        logger.console.print(f"  {label}: [red]not found[/red]")
