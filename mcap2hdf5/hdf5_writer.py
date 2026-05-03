@@ -1,5 +1,3 @@
-import logging
-
 import h5py
 import numpy as np
 
@@ -34,13 +32,13 @@ from mcap2hdf5.configs.names import (
     TIMESTAMP,
     TRANSFORMS,
 )
+from mcap2hdf5.utils.logger import logger
 from mcap2hdf5.utils.message_converter import MessageConverter
 
 
 class HDF5Writer:
     def __init__(self, filePath):
         self.filePath = filePath
-        self.logger = logging.getLogger(__name__)
         self.h5File = h5py.File(filePath, "w")
         self.initialized = False
 
@@ -159,7 +157,7 @@ class HDF5Writer:
 
     def __del__(self):
         if hasattr(self, "h5File") and self.h5File.id.valid:
-            self.logger.warning("HDF5Writer was not finalized — closing file in destructor.")
+            logger.warning("HDF5Writer was not finalized — closing file in destructor.")
             self.h5File.close()
 
     def finalize(self, cameraMetadata, staticTransforms):
@@ -185,7 +183,7 @@ class HDF5Writer:
             self.h5File.attrs[CAMERA_WIDTH_ATTRIBUTE] = int(cameraMetadata.width)
             self.h5File.attrs[CAMERA_HEIGHT_ATTRIBUTE] = int(cameraMetadata.height)
         else:
-            self.logger.warning("No Camera Metadata found to persist!")
+            logger.warning("No camera metadata found to persist.")
 
         if staticTransforms:
             staticGroup = self.h5File.create_group("static_transforms")
@@ -198,12 +196,12 @@ class HDF5Writer:
 
                 staticGroup.create_dataset(key, data=matrix, dtype=np.float32)
         else:
-            self.logger.warning("No Static TF found to persist!")
+            logger.warning("No static TF found to persist.")
 
-        print("\nDataset Statistics:")
-        print(f"  Total samples: {numSamples}")
-        print(f"  Total lidar points: {lidarPointOffset}")
         avgPoints = lidarPointOffset / numSamples if numSamples > 0 else 0
-        print(f"  Average points per sample: {avgPoints:.1f}")
+        logger.console.print("\n[bold]Dataset statistics:[/bold]")
+        logger.info(f"  Total samples:              {numSamples}")
+        logger.info(f"  Total lidar points:         {lidarPointOffset}")
+        logger.info(f"  Average points per sample:  {avgPoints:.1f}")
 
         self.h5File.close()

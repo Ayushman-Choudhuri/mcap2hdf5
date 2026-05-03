@@ -1,5 +1,3 @@
-import logging
-
 import numpy as np
 
 from mcap2hdf5.configs import (
@@ -22,7 +20,6 @@ class SensorDataSynchronizer:
         self.cameraImageTopic = cameraImageTopic
         self.lidarTopic = lidarTopic
         self.tfTopic = tfTopic
-        self.logger = logging.getLogger(__name__)
 
         self.chunkBuffer = {
             self.lidarTopic: [],
@@ -81,7 +78,6 @@ class SensorDataSynchronizer:
         samples = []
 
         for lidarEntry in lidarFrames:
-            """ Use LIDAR timestamp as the reference """
             lidarTimestamp = lidarEntry[TIMESTAMP]
             closestCamera = self.findClosestFrame(lidarTimestamp, cameraFrames)
 
