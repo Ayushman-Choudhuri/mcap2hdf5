@@ -15,9 +15,9 @@
 
 ## Overview
 
-mcap2hdf5 converts ROS2 MCAP sensor recordings into synchronized, ML-ready HDF5 datasets — handling multi-modal time alignment, coordinate transform interpolation, and compressed storage so you don't have to.
+mcap2hdf5 is a streamlined tool for transforming ROS2 MCAP sensor recordings into synchronized, ML-ready HDF5 datasets.
 
-> **Supported modalities for 0.1.0 release:** camera, LiDAR, transforms
+> **Supported modalities for upcoming 0.1.0 release:** camera, LiDAR, transforms
 
 ---
 
