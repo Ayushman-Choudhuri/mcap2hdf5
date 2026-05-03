@@ -5,17 +5,18 @@ import typer
 from mcap2hdf5.pipeline import runPipeline
 from mcap2hdf5.utils.cli_utils import (
     console,
-    detectSensors,
     inspectMcap,
     printAutoDetection,
     printTopicTable,
 )
+from mcap2hdf5.utils.detect import detectSensors
 from mcap2hdf5.utils.job_config import JobConfig
 
 app = typer.Typer(
     name="mcap2hdf5",
     help="Convert ROS2 MCAP recordings to synchronized HDF5 datasets.",
     no_args_is_help=True,
+    add_completion=False,
 )
 
 
@@ -31,7 +32,7 @@ def inspect(
 
     topicToSchema, topicCounts = inspectMcap(path)
     printTopicTable(path, topicToSchema, topicCounts)
-    printAutoDetection(detectSensors(topicToSchema))
+    printAutoDetection(topicToSchema, detectSensors(topicToSchema))
 
 
 @app.command()
@@ -47,7 +48,7 @@ def init(
     topicToSchema, topicCounts = inspectMcap(path)
     printTopicTable(path, topicToSchema, topicCounts)
     detectedSensors = detectSensors(topicToSchema)
-    printAutoDetection(detectedSensors)
+    printAutoDetection(topicToSchema, detectedSensors)
 
     cameraImage, cameraInfo, lidar, tf, tfStatic = detectedSensors
     jobConfig = JobConfig.from_detection(
@@ -67,14 +68,8 @@ def init(
 def convert(
     path: Path = typer.Argument(
         ...,
-        help="Path to a job config YAML or an MCAP file (topics auto-detected).",
-        metavar="PATH",
-    ),
-    output: Path | None = typer.Option(
-        None,
-        "--output",
-        "-o",
-        help="Output HDF5 path. Overrides the value in the job config.",
+        help="Path to a job config YAML file.",
+        metavar="JOB_CONFIG_PATH",
     ),
     verbose: bool = typer.Option(
         False,
@@ -85,40 +80,18 @@ def convert(
 ) -> None:
     """Convert an MCAP recording to a synchronized HDF5 dataset."""
 
-    if path.suffix in (".yaml", ".yml"):
-        try:
-            jobConfig = JobConfig.load(path)
-        except Exception as e:
-            console.print(f"[red]Error:[/red] Failed to load config: {e}")
-            raise typer.Exit(code=1) from None
-        if output is not None:
-            jobConfig.outputHdf5 = str(output)
-
-    elif path.suffix == ".mcap":
-        topicToSchema, _ = inspectMcap(path)
-        detectedSensors = detectSensors(topicToSchema)
-        printAutoDetection(detectedSensors)
-        cameraImage, cameraInfo, lidar, tf, tfStatic = detectedSensors
-        jobConfig = JobConfig.from_detection(path, cameraImage, cameraInfo, lidar, tf, tfStatic)
-        jobConfig.outputHdf5 = str(output if output is not None else Path(path.stem + ".hdf5"))
-
-    else:
+    if path.suffix not in (".yaml", ".yml"):
         console.print(
-            f"[red]Error:[/red] Unrecognised file type '{path.suffix}'."
-            " Expected .mcap or .yaml/.yml"
+            f"[red]Error:[/red] Expected a .yaml or .yml job config, got '{path.suffix}'."
+            " Run `mcap2hdf5 init <file.mcap>` to generate one."
         )
         raise typer.Exit(code=1)
 
-    m = jobConfig.modalities
-    if not m.camera.imageTopic:
-        console.print("[red]Error:[/red] No camera image topic configured or detected.")
-        raise typer.Exit(code=1)
-    if not m.lidar.topic:
-        console.print("[red]Error:[/red] No LiDAR topic configured or detected.")
-        raise typer.Exit(code=1)
-    if not m.tf.topic:
-        console.print("[red]Error:[/red] No TF topic configured or detected.")
-        raise typer.Exit(code=1)
+    try:
+        jobConfig = JobConfig.load(path)
+    except Exception as e:
+        console.print(f"[red]Error:[/red] Failed to load config: {e}")
+        raise typer.Exit(code=1) from None
 
     try:
         runPipeline(jobConfig, verbose)

@@ -8,7 +8,7 @@ import pytest
 from typer.testing import CliRunner
 
 from mcap2hdf5.cli import app
-from mcap2hdf5.utils.cli_utils import DetectedSensors, detectFirst, detectSensors, detectTF
+from mcap2hdf5.utils.detect import DetectedSensors, detectFirst, detectSensors, detectTF
 from mcap2hdf5.utils.job_config import JobConfig
 
 runner = CliRunner()
@@ -17,12 +17,12 @@ runner = CliRunner()
 class TestDetectFirst:
     def testReturnsFirstMatchingTopic(self):
         topicToSchema = {"/camera/image": "sensor_msgs/msg/Image"}
-        result = detectFirst(topicToSchema, {"sensor_msgs/msg/Image"}, "camera image")
+        result = detectFirst(topicToSchema, {"sensor_msgs/msg/Image"})
         assert result == "/camera/image"
 
     def testReturnsNoneWhenNoMatch(self):
         topicToSchema = {"/camera/image": "sensor_msgs/msg/Image"}
-        result = detectFirst(topicToSchema, {"sensor_msgs/msg/PointCloud2"}, "lidar")
+        result = detectFirst(topicToSchema, {"sensor_msgs/msg/PointCloud2"})
         assert result is None
 
     def testReturnsFirstWhenMultipleMatch(self):
@@ -30,16 +30,16 @@ class TestDetectFirst:
             "/cam0/image": "sensor_msgs/msg/Image",
             "/cam1/image": "sensor_msgs/msg/Image",
         }
-        result = detectFirst(topicToSchema, {"sensor_msgs/msg/Image"}, "camera image")
+        result = detectFirst(topicToSchema, {"sensor_msgs/msg/Image"})
         assert result == "/cam0/image"
 
     def testEmptyTopicMap(self):
-        result = detectFirst({}, {"sensor_msgs/msg/Image"}, "camera image")
+        result = detectFirst({}, {"sensor_msgs/msg/Image"})
         assert result is None
 
     def testMatchesOnlyExactSchemaName(self):
         topicToSchema = {"/lidar": "sensor_msgs/msg/PointCloud2Extra"}
-        result = detectFirst(topicToSchema, {"sensor_msgs/msg/PointCloud2"}, "lidar")
+        result = detectFirst(topicToSchema, {"sensor_msgs/msg/PointCloud2"})
         assert result is None
 
 
@@ -383,24 +383,6 @@ class TestCliConvert:
         assert result.exit_code == 0
         mock_run.assert_called_once()
 
-    def testConvertWithMcapCallsRunPipeline(self, tmp_path):
-        mcap = tmp_path / "test.mcap"
-        mcap.write_bytes(b"")
-        summary = _makeChannelSummary(_FULL_TOPICS)
-
-        with (
-            patch("mcap2hdf5.utils.cli_utils.make_reader") as mock_reader_cls,
-            patch("mcap2hdf5.cli.runPipeline") as mock_run,
-        ):
-            mock_reader = MagicMock()
-            mock_reader.get_summary.return_value = summary
-            mock_reader_cls.return_value = mock_reader
-
-            result = runner.invoke(app, ["convert", str(mcap)])
-
-        assert result.exit_code == 0
-        mock_run.assert_called_once()
-
     def testConvertUnknownExtensionExits(self, tmp_path):
         txt = tmp_path / "data.txt"
         txt.write_text("")
@@ -408,7 +390,7 @@ class TestCliConvert:
         result = runner.invoke(app, ["convert", str(txt)])
 
         assert result.exit_code == 1
-        assert "Unrecognised" in result.output
+        assert "Expected a .yaml or .yml" in result.output
 
     def testConvertBadYamlExitsWithError(self, tmp_path):
         yaml_cfg = tmp_path / "bad.yaml"
@@ -419,115 +401,6 @@ class TestCliConvert:
 
         assert result.exit_code == 1
         assert "Failed to load config" in result.output
-
-    def testConvertMissingCameraTopicExits(self, tmp_path):
-        yaml_cfg = tmp_path / "job.yaml"
-        yaml_cfg.write_text("")
-        from mcap2hdf5.utils.job_config import JobConfig
-
-        job = JobConfig.from_detection(
-            Path("test.mcap"),
-            cameraImage=None,
-            cameraInfo=None,
-            lidar="/velodyne_points",
-            tf="/tf",
-        )
-
-        with (
-            patch("mcap2hdf5.cli.JobConfig.load", return_value=job),
-            patch("mcap2hdf5.cli.runPipeline"),
-        ):
-            result = runner.invoke(app, ["convert", str(yaml_cfg)])
-
-        assert result.exit_code == 1
-        assert "camera" in result.output.lower()
-
-    def testConvertMissingLidarTopicExits(self, tmp_path):
-        yaml_cfg = tmp_path / "job.yaml"
-        yaml_cfg.write_text("")
-        from mcap2hdf5.utils.job_config import JobConfig
-
-        job = JobConfig.from_detection(
-            Path("test.mcap"),
-            cameraImage="/camera/image_raw",
-            cameraInfo=None,
-            lidar=None,
-            tf="/tf",
-        )
-
-        with (
-            patch("mcap2hdf5.cli.JobConfig.load", return_value=job),
-            patch("mcap2hdf5.cli.runPipeline"),
-        ):
-            result = runner.invoke(app, ["convert", str(yaml_cfg)])
-
-        assert result.exit_code == 1
-        assert "lidar" in result.output.lower()
-
-    def testConvertMissingTFTopicExits(self, tmp_path):
-        yaml_cfg = tmp_path / "job.yaml"
-        yaml_cfg.write_text("")
-        from mcap2hdf5.utils.job_config import JobConfig
-
-        job = JobConfig.from_detection(
-            Path("test.mcap"),
-            cameraImage="/camera/image_raw",
-            cameraInfo=None,
-            lidar="/velodyne_points",
-            tf=None,
-        )
-
-        with (
-            patch("mcap2hdf5.cli.JobConfig.load", return_value=job),
-            patch("mcap2hdf5.cli.runPipeline"),
-        ):
-            result = runner.invoke(app, ["convert", str(yaml_cfg)])
-
-        assert result.exit_code == 1
-        assert "tf" in result.output.lower()
-
-    def testConvertOutputOptionOverridesYamlConfig(self, tmp_path):
-        yaml_cfg = tmp_path / "job.yaml"
-        yaml_cfg.write_text("")
-        custom_out = tmp_path / "custom.hdf5"
-        job = _makeValidJobConfig()
-
-        captured = {}
-
-        def capture_run(cfg, verbose):
-            captured["outputHdf5"] = cfg.outputHdf5
-
-        with (
-            patch("mcap2hdf5.cli.JobConfig.load", return_value=job),
-            patch("mcap2hdf5.cli.runPipeline", side_effect=capture_run),
-        ):
-            result = runner.invoke(app, ["convert", str(yaml_cfg), "--output", str(custom_out)])
-
-        assert result.exit_code == 0
-        assert captured["outputHdf5"] == str(custom_out)
-
-    def testConvertDefaultOutputForMcap(self, tmp_path):
-        mcap = tmp_path / "myrecording.mcap"
-        mcap.write_bytes(b"")
-        summary = _makeChannelSummary(_FULL_TOPICS)
-
-        captured = {}
-
-        def capture_run(cfg, verbose):
-            captured["outputHdf5"] = cfg.outputHdf5
-
-        with (
-            patch("mcap2hdf5.utils.cli_utils.make_reader") as mock_reader_cls,
-            patch("mcap2hdf5.cli.runPipeline", side_effect=capture_run),
-        ):
-            mock_reader = MagicMock()
-            mock_reader.get_summary.return_value = summary
-            mock_reader_cls.return_value = mock_reader
-
-            result = runner.invoke(app, ["convert", str(mcap)])
-
-        assert result.exit_code == 0
-        assert captured["outputHdf5"].endswith("myrecording.hdf5")
 
     def testConvertPipelineExceptionExitsWithError(self, tmp_path):
         yaml_cfg = tmp_path / "job.yaml"
