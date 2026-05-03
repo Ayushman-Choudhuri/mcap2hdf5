@@ -1,5 +1,3 @@
-import logging
-
 import numpy as np
 
 from mcap2hdf5.configs import (
@@ -22,7 +20,6 @@ class SensorDataSynchronizer:
         self.cameraImageTopic = cameraImageTopic
         self.lidarTopic = lidarTopic
         self.tfTopic = tfTopic
-        self.logger = logging.getLogger(__name__)
 
         self.chunkBuffer = {
             self.lidarTopic: [],
@@ -64,14 +61,10 @@ class SensorDataSynchronizer:
                 self.tfCache[key] = []
 
             matrix = MessageConverter.transformToMatrix(tfStamped.transform)
-            self.tfCache[key].append({
-                TIMESTAMP: timestamp,
-                TF_MATRIX: matrix
-            })
+            self.tfCache[key].append({TIMESTAMP: timestamp, TF_MATRIX: matrix})
 
             if len(self.tfCache[key]) > TF_CACHE_SIZE:
                 self.tfCache[key].pop(0)
-
 
     def checkFlushConstraint(self, sensorTopicName, currentTimestamp):
         lastTimestamp = self.lastTimestamps.get(sensorTopicName)
@@ -85,7 +78,6 @@ class SensorDataSynchronizer:
         samples = []
 
         for lidarEntry in lidarFrames:
-            """ Use LIDAR timestamp as the reference """
             lidarTimestamp = lidarEntry[TIMESTAMP]
             closestCamera = self.findClosestFrame(lidarTimestamp, cameraFrames)
 
@@ -111,7 +103,7 @@ class SensorDataSynchronizer:
             self.lidarTopic: [],
             self.cameraImageTopic: [],
         }
-        self.lastTimestamps = {key: None for key in self.lastTimestamps}
+        self.lastTimestamps = dict.fromkeys(self.lastTimestamps)
 
         for sample in samples:
             yield sample
@@ -121,7 +113,7 @@ class SensorDataSynchronizer:
             return None
 
         closestFrame = None
-        minDiff = float('inf')
+        minDiff = float("inf")
 
         for frame in frames:
             diff = abs(frame[TIMESTAMP] - targetTimestamp)

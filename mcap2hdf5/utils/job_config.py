@@ -2,7 +2,6 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Optional
 
 import yaml
 
@@ -33,8 +32,8 @@ class SyncConfig:
 
 @dataclass
 class CameraConfig:
-    imageTopic: Optional[str]
-    infoTopic: Optional[str]
+    imageTopic: str | None
+    infoTopic: str | None
     sync: SyncConfig = field(default_factory=lambda: SyncConfig(enabled=True))
 
     def to_dict(self) -> dict:
@@ -47,10 +46,8 @@ class CameraConfig:
 
 @dataclass
 class LidarConfig:
-    topic: Optional[str]
-    sync: SyncConfig = field(
-        default_factory=lambda: SyncConfig(enabled=True, reference=True)
-    )
+    topic: str | None
+    sync: SyncConfig = field(default_factory=lambda: SyncConfig(enabled=True, reference=True))
 
     def to_dict(self) -> dict:
         return {
@@ -61,8 +58,8 @@ class LidarConfig:
 
 @dataclass
 class TFConfig:
-    topic: Optional[str] = None
-    staticTopic: Optional[str] = None
+    topic: str | None = None
+    staticTopic: str | None = None
     sync: SyncConfig = field(default_factory=lambda: SyncConfig(enabled=False))
 
     def to_dict(self) -> dict:
@@ -114,11 +111,11 @@ class JobConfig:
     def from_detection(
         cls,
         mcapPath: Path,
-        cameraImage: Optional[str],
-        cameraInfo: Optional[str],
-        lidar: Optional[str],
-        tf: Optional[str] = None,
-        tfStatic: Optional[str] = None,
+        cameraImage: str | None,
+        cameraInfo: str | None,
+        lidar: str | None,
+        tf: str | None = None,
+        tfStatic: str | None = None,
     ) -> JobConfig:
         """Build a JobConfig from MCAP auto-detection results."""
         outputHdf5 = f"data/processed/{mcapPath.stem}.hdf5"
@@ -140,6 +137,53 @@ class JobConfig:
             "modalities": self.modalities.to_dict(),
             "pipeline": self.pipeline.to_dict(),
         }
+
+    @classmethod
+    def load(cls, path: Path) -> JobConfig:
+        """Deserialize a JobConfig from a YAML file produced by save()."""
+        with open(path) as f:
+            data = yaml.safe_load(f)
+
+        cam = data["modalities"]["camera"]
+        cam_sync = cam.get("sync", {})
+        lidar = data["modalities"]["lidar"]
+        lidar_sync = lidar.get("sync", {})
+        tf = data["modalities"]["tf"]
+        tf_sync = tf.get("sync", {})
+        pipeline = data.get("pipeline", {})
+
+        return cls(
+            sourceMcap=data["source"]["mcap"],
+            outputHdf5=data["output"]["hdf5"],
+            modalities=ModalitiesConfig(
+                camera=CameraConfig(
+                    imageTopic=cam.get("image_topic"),
+                    infoTopic=cam.get("info_topic"),
+                    sync=SyncConfig(
+                        enabled=cam_sync.get("enabled", True),
+                        algorithm=cam_sync.get("algorithm", "nearest"),
+                        thresholdSec=cam_sync.get("threshold_sec", SENSOR_SYNC_THRESHOLD),
+                    ),
+                ),
+                lidar=LidarConfig(
+                    topic=lidar.get("topic"),
+                    sync=SyncConfig(
+                        enabled=lidar_sync.get("enabled", True),
+                        reference=lidar_sync.get("reference", True),
+                    ),
+                ),
+                tf=TFConfig(
+                    topic=tf.get("topic"),
+                    staticTopic=tf.get("static_topic"),
+                    sync=SyncConfig(enabled=tf_sync.get("enabled", False)),
+                ),
+            ),
+            pipeline=PipelineConfig(
+                maxChunkGap=pipeline.get("max_chunk_gap", MAX_CHUNK_GAP),
+                hdf5WriteBatchSize=pipeline.get("hdf5_write_batch_size", HDF5_WRITE_BATCH_SIZE),
+                tfCacheSize=pipeline.get("tf_cache_size", TF_CACHE_SIZE),
+            ),
+        )
 
     def save(self, path: Path) -> None:
         """Serialize to YAML at the given path."""
