@@ -61,7 +61,7 @@ class HDF5Writer:
             globalIndex = startIndex + index
 
             lidarData = MessageConverter.lidarToNumpy(sample[LIDAR][ROS_MSG])
-            cameraData = MessageConverter.compressedImageToNumpy(sample[CAMERA][ROS_MSG])
+            cameraData = MessageConverter.imageToNumpy(sample[CAMERA][ROS_MSG])
 
             self.h5File[TIMESTAMP_DATASET_PATH][globalIndex] = sample[TIMESTAMP]
             self.h5File[CHUNK_IDS_DATASET_PATH][globalIndex] = sample[CHUNK_ID]
@@ -122,7 +122,7 @@ class HDF5Writer:
         )
 
         self.h5File.create_group(CAMERA_GROUP)
-        cameraData = MessageConverter.compressedImageToNumpy(sampleTemplate[CAMERA][ROS_MSG])
+        cameraData = MessageConverter.imageToNumpy(sampleTemplate[CAMERA][ROS_MSG])
         height, width, channels = cameraData.shape
         self.h5File.create_dataset(
             CAMERA_IMAGES_DATASET_PATH,
