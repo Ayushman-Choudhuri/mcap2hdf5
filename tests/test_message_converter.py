@@ -8,6 +8,14 @@ from scipy.spatial.transform import Rotation as R
 from mcap2hdf5.utils.message_converter import MessageConverter
 
 
+def makeRawImage(encoding, height, width, data):
+    return SimpleNamespace(encoding=encoding, height=height, width=width, data=data)
+
+
+def makeCompressedImage(format, data):
+    return SimpleNamespace(format=format, data=data)
+
+
 def makePointField(name, offset, datatype):
     return SimpleNamespace(name=name, offset=offset, datatype=datatype)
 
@@ -115,14 +123,101 @@ class TestLidarToNumpy:
         assert result.shape == (1, 3)
         np.testing.assert_array_almost_equal(result[0], [1.0, 2.0, 3.0])
 
-    def testMissingFieldRaisesValueError(self):
-        """Raises ValueError when a requested field is absent from the message."""
+    def testNoIntensityAliasZeroFills(self):
+        """When no intensity alias is present, the 4th column is zero-filled rather than raising."""
+        fields = [("x", 0, 7), ("y", 4, 7), ("z", 8, 7)]
+        points = [struct.pack("<fff", 1.0, 2.0, 3.0)]
+        msg = makePointCloud2(fields, point_step=12, points=points)
+
+        result = MessageConverter.lidarToNumpy(msg)
+
+        assert result.shape == (1, 4)
+        np.testing.assert_array_almost_equal(result[0], [1.0, 2.0, 3.0, 0.0])
+
+    def testReflectivityAutoDetected(self):
+        """Ouster-style 'reflectivity' field is used as the intensity alias."""
+        fields = [("x", 0, 7), ("y", 4, 7), ("z", 8, 7), ("reflectivity", 12, 7)]
+        points = [struct.pack("<ffff", 1.0, 2.0, 3.0, 42.0)]
+        msg = makePointCloud2(fields, point_step=16, points=points)
+
+        result = MessageConverter.lidarToNumpy(msg)
+
+        assert result.shape == (1, 4)
+        np.testing.assert_array_almost_equal(result[0], [1.0, 2.0, 3.0, 42.0])
+
+    def testExplicitMissingFieldRaisesValueError(self):
+        """Explicit fieldNames override still raises if a requested field is absent."""
         fields = [("x", 0, 7), ("y", 4, 7), ("z", 8, 7)]
         points = [struct.pack("<fff", 1.0, 2.0, 3.0)]
         msg = makePointCloud2(fields, point_step=12, points=points)
 
         with pytest.raises(ValueError, match="PointCloud2 missing field: intensity"):
-            MessageConverter.lidarToNumpy(msg)
+            MessageConverter.lidarToNumpy(msg, fieldNames=["x", "y", "z", "intensity"])
+
+
+class TestRawImageToNumpy:
+    def testBgr8ReturnsCorrectShape(self):
+        """bgr8 raw image is decoded to (H, W, 3) uint8."""
+        h, w = 4, 6
+        data = bytes(np.zeros((h, w, 3), dtype=np.uint8).tobytes())
+        msg = makeRawImage("bgr8", h, w, data)
+
+        result = MessageConverter.rawImageToNumpy(msg)
+
+        assert result.shape == (h, w, 3)
+        assert result.dtype == np.uint8
+
+    def testRgb8IsConvertedToBgr(self):
+        """rgb8 image is converted to BGR — R and B channels are swapped."""
+        h, w = 2, 2
+        img_rgb = np.zeros((h, w, 3), dtype=np.uint8)
+        img_rgb[:, :, 0] = 255  # R channel
+        msg = makeRawImage("rgb8", h, w, bytes(img_rgb.tobytes()))
+
+        result = MessageConverter.rawImageToNumpy(msg)
+
+        assert result.shape == (h, w, 3)
+        assert result[0, 0, 2] == 255  # R moved to BGR[2]
+        assert result[0, 0, 0] == 0    # B channel is zero
+
+    def testBgra8IsConvertedToBgr(self):
+        """bgra8 alpha channel is dropped; output is (H, W, 3)."""
+        h, w = 2, 2
+        data = bytes(np.ones((h, w, 4), dtype=np.uint8).tobytes())
+        msg = makeRawImage("bgra8", h, w, data)
+
+        result = MessageConverter.rawImageToNumpy(msg)
+
+        assert result.shape == (h, w, 3)
+
+    def testUnsupportedEncodingRaisesValueError(self):
+        """Unsupported encodings raise ValueError with a helpful message."""
+        msg = makeRawImage("mono8", 4, 4, bytes(16))
+
+        with pytest.raises(ValueError, match="Unsupported raw image encoding 'mono8'"):
+            MessageConverter.rawImageToNumpy(msg)
+
+    def testImageToNumpyDispatchesOnFormat(self):
+        """imageToNumpy routes to compressedImageToNumpy when message has a 'format' field."""
+        import cv2
+        h, w = 8, 8
+        img = np.zeros((h, w, 3), dtype=np.uint8)
+        _, buf = cv2.imencode(".jpg", img)
+        msg = makeCompressedImage("jpeg", buf.tobytes())
+
+        result = MessageConverter.imageToNumpy(msg)
+
+        assert result.shape == (h, w, 3)
+
+    def testImageToNumpyDispatchesOnEncoding(self):
+        """imageToNumpy routes to rawImageToNumpy when message has no 'format' field."""
+        h, w = 4, 4
+        data = bytes(np.zeros((h, w, 3), dtype=np.uint8).tobytes())
+        msg = makeRawImage("bgr8", h, w, data)
+
+        result = MessageConverter.imageToNumpy(msg)
+
+        assert result.shape == (h, w, 3)
 
 
 class TestInterpolateMatrix:
