@@ -198,6 +198,9 @@ class HDF5Writer:
         else:
             logger.warning("No static TF found to persist.")
 
+        from importlib.metadata import version
+        self.h5File.attrs["mcap2hdf5_version"] = version("mcap2hdf5")
+
         avgPoints = lidarPointOffset / numSamples if numSamples > 0 else 0
         logger.console.print("\n[bold]Dataset statistics:[/bold]")
         logger.info(f"  Total samples:              {numSamples}")
