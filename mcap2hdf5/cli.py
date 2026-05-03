@@ -4,13 +4,13 @@ import typer
 
 from mcap2hdf5.pipeline import runPipeline
 from mcap2hdf5.utils.cli_utils import (
-    console,
     inspectMcap,
     printAutoDetection,
     printTopicTable,
 )
 from mcap2hdf5.utils.detect import detectSensors
 from mcap2hdf5.utils.job_config import JobConfig
+from mcap2hdf5.utils.logger import logger
 
 app = typer.Typer(
     name="mcap2hdf5",
@@ -61,7 +61,7 @@ def init(
     )
     outputPath = Path(f"{path.stem}_config.yaml")
     jobConfig.save(outputPath)
-    console.print(f"\n[bold green]Config written to:[/bold green] {outputPath}")
+    logger.console.print(f"\n[bold green]Config written to:[/bold green] {outputPath}")
 
 
 @app.command()
@@ -71,29 +71,24 @@ def convert(
         help="Path to a job config YAML file.",
         metavar="JOB_CONFIG_PATH",
     ),
-    verbose: bool = typer.Option(
-        False,
-        "--verbose",
-        "-v",
-        help="Enable verbose pipeline logging.",
-    ),
 ) -> None:
     """Convert an MCAP recording to a synchronized HDF5 dataset."""
 
     if path.suffix not in (".yaml", ".yml"):
-        console.print(
-            f"[red]Error:[/red] Expected a .yaml or .yml job config, got '{path.suffix}'."
-            " Run `mcap2hdf5 init <file.mcap>` to generate one."
+        logger.error(
+            f"Expected a .yaml or .yml job config, got '{path.suffix}'. "
+            "Run `mcap2hdf5 init <file.mcap>` to generate one automatically or write manually. "
+            "See the documentation for details."
         )
         raise typer.Exit(code=1)
 
     try:
         jobConfig = JobConfig.load(path)
     except Exception as e:
-        console.print(f"[red]Error:[/red] Failed to load config: {e}")
+        logger.error(f"Failed to load config: {e}")
         raise typer.Exit(code=1) from None
 
     try:
-        runPipeline(jobConfig, verbose)
+        runPipeline(jobConfig)
     except Exception:
         raise typer.Exit(code=1) from None
