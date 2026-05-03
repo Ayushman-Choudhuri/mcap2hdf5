@@ -58,7 +58,7 @@ pipeline:
 
 | Key | Type | Description |
 |-----|------|-------------|
-| `hdf5` | string | Path for the output HDF5 file. The `--output` / `-o` flag on `convert` overrides this at runtime. Parent directories are created automatically. |
+| `hdf5` | string | Path for the output HDF5 file. Parent directories are created automatically. |
 
 ### `modalities.camera`
 
@@ -145,8 +145,6 @@ pipeline:
   max_chunk_gap: 2.0
 ```
 
-**Override the output path at runtime without editing the config**
+**Override the output path without editing the config**
 
-```bash
-mcap2hdf5 convert recording_config.yaml --output /scratch/out.hdf5
-```
+Edit the `output.hdf5` field directly in the YAML, or duplicate the config file for each output path variant.
