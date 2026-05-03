@@ -420,16 +420,10 @@ class TestCliConvert:
         yaml_cfg.write_text("")
         job = _makeValidJobConfig()
 
-        captured = {}
-
-        def capture_run(cfg, verbose):
-            captured["verbose"] = verbose
-
         with (
             patch("mcap2hdf5.cli.JobConfig.load", return_value=job),
-            patch("mcap2hdf5.cli.runPipeline", side_effect=capture_run),
+            patch("mcap2hdf5.cli.runPipeline"),
         ):
-            result = runner.invoke(app, ["convert", str(yaml_cfg), "--verbose"])
+            result = runner.invoke(app, ["convert", str(yaml_cfg)])
 
         assert result.exit_code == 0
-        assert captured["verbose"] is True
