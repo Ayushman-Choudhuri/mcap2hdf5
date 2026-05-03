@@ -1,8 +1,8 @@
-import logging
-
-from mcap_ros2.reader import read_ros2_messages
+from mcap.reader import make_reader
+from mcap_ros2.decoder import DecoderFactory
 
 from mcap2hdf5.utils.dataclasses import StreamMessage
+from mcap2hdf5.utils.logger import logger
 
 
 class MCAPSource:
@@ -19,16 +19,16 @@ class MCAPSource:
         self.tfStaticTopic = tfStaticTopic
         self.cameraMetadata = None
         self.staticTransforms = None
-        self.logger = logging.getLogger(__name__)
 
     def streamMessages(self):
         try:
             with open(self.dataSourcePath, "rb") as f:
-                for msg in read_ros2_messages(f, topics=self.topics):
-                    topic = msg.channel.topic
-                    rosMsg = msg.ros_msg
-
-                    timestamp = self.extractTimestamp(rosMsg, msg.log_time.timestamp())
+                reader = make_reader(f, decoder_factories=[DecoderFactory()])
+                for _, channel, message, rosMsg in reader.iter_decoded_messages(
+                    topics=self.topics
+                ):
+                    topic = channel.topic
+                    timestamp = self.extractTimestamp(rosMsg, message.log_time / 1e9)
 
                     if (
                         self.cameraInfoTopic
@@ -36,7 +36,7 @@ class MCAPSource:
                         and self.cameraMetadata is None
                     ):
                         self.cameraMetadata = rosMsg
-                        self.logger.info(f"Captured camera metadata from {topic}")
+                        logger.info(f"Captured camera metadata from {topic}")
 
                     if (
                         self.tfStaticTopic
@@ -44,7 +44,7 @@ class MCAPSource:
                         and self.staticTransforms is None
                     ):
                         self.staticTransforms = rosMsg
-                        self.logger.info(f"Captured static transforms from {topic}")
+                        logger.info(f"Captured static transforms from {topic}")
 
                     yield StreamMessage(
                         topic=topic,
@@ -53,10 +53,10 @@ class MCAPSource:
                     )
 
         except FileNotFoundError:
-            self.logger.error(f"MCAP file not found: {self.dataSourcePath}")
+            logger.error(f"MCAP file not found: {self.dataSourcePath}")
             raise
         except Exception as e:
-            self.logger.error(f"Error reading MCAP stream: {e}")
+            logger.error(f"Error reading MCAP stream: {e}")
             raise
 
     def extractTimestamp(self, rosMsg, mcapLogTime):
