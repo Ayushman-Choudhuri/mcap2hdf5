@@ -26,8 +26,10 @@ mcap2hdf5 is a streamlined tool for transforming ROS2 MCAP sensor recordings int
 Python 3.10+ required.
 
 ```bash
-pip install mcap2hdf5
+pip install git+https://github.com/Ayushman-Choudhuri/mcap2hdf5.git
 ```
+
+> PyPI release planned for v0.1.0.
 
 ---
 
